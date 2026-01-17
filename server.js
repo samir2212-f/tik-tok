@@ -2,7 +2,7 @@ const express = require("express");
 const { WebcastPushConnection } = require("tiktok-live-connector");
 const WebSocket = require("ws");
 
-const TIKTOK_USER = "djnenebaltimore"; 
+const TIKTOK_USER = "naticita.2"; 
 
 const app = express();
 app.use(express.static("public"));
@@ -46,3 +46,4 @@ tiktok.on("chat", data => {
     }
   });
 });
+
