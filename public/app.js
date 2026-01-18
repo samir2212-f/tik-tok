@@ -202,5 +202,28 @@ if (data.gift) {
       if (estadoEl) estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
     });
   };
+  // 🔗 CONECTAR A TIKTOK DESDE EL INPUT
+window.conectar = function () {
+  const input = document.getElementById("user");
+  if (!input) {
+    alert("No existe el input de usuario");
+    return;
+  }
+
+  const user = input.value.trim();
+  if (!user) {
+    alert("Ingresa un usuario de TikTok");
+    return;
+  }
+
+  ws.send(JSON.stringify({
+    type: "set-user",
+    user
+  }));
+
+  console.log("➡️ Usuario enviado al servidor:", user);
+};
+
 });
+
 
