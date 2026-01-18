@@ -1,8 +1,35 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  // 🌐 WEBSOCKET (Render / Local)
+  // ===============================
+  // 🌐 WEBSOCKET (LOCAL / RENDER)
+  // ===============================
   const protocolo = location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${protocolo}://${location.host}`);
+  let ws;
+
+  const conexionEl = document.getElementById("conexion");
+  const estadoEl = document.getElementById("estado");
+  const likesEl = document.getElementById("likes");
+
+  function conectarWS() {
+    ws = new WebSocket(`${protocolo}://${location.host}`);
+
+    ws.onopen = () => {
+      console.log("🟢 WebSocket conectado");
+      if (conexionEl) conexionEl.innerText = "🟢 Conectado al servidor";
+    };
+
+    ws.onclose = () => {
+      console.log("🔴 WebSocket cerrado, reintentando...");
+      if (conexionEl) conexionEl.innerText = "🔴 Desconectado";
+      setTimeout(conectarWS, 3000);
+    };
+
+    ws.onerror = () => ws.close();
+
+    ws.onmessage = manejarMensaje;
+  }
+
+  conectarWS();
 
   // ===============================
   // 🧬 ANTI DUPLICADOS
@@ -20,16 +47,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===============================
   // 🔊 ESTADO
   // ===============================
-  let audioActivado = false;
+  let audioActivado = localStorage.getItem("audioActivado") === "true";
   let totalLikes = 0;
 
-  const estadoEl = document.getElementById("estado");
-  const likesEl = document.getElementById("likes");
-  const conexionEl = document.getElementById("conexion");
-
-  if (localStorage.getItem("audioActivado") === "true") {
-    audioActivado = true;
-    if (estadoEl) estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
+  if (audioActivado && estadoEl) {
+    estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
   }
 
   // ===============================
@@ -126,12 +148,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     audio.onended = () => {
       sonidoReproduciendo = false;
-      setTimeout(procesarColaSonidos, 50);
+      setTimeout(procesarColaSonidos, 80);
     };
 
     audio.onerror = () => {
       sonidoReproduciendo = false;
-      setTimeout(procesarColaSonidos, 50);
+      setTimeout(procesarColaSonidos, 80);
     };
 
     audio.play().catch(() => {
@@ -142,15 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===============================
   // 📡 MENSAJES DEL SERVIDOR
   // ===============================
-  ws.onopen = () => {
-    if (conexionEl) conexionEl.innerText = "🟢 Conectado al servidor";
-  };
-
-  ws.onclose = () => {
-    if (conexionEl) conexionEl.innerText = "🔴 Desconectado";
-  };
-
-  ws.onmessage = (event) => {
+  function manejarMensaje(event) {
     const data = JSON.parse(event.data);
 
     // 🎁 REGALOS
@@ -183,15 +197,22 @@ document.addEventListener("DOMContentLoaded", () => {
       procesarColaSonidos();
     }
 
-    // 💬 CHAT
+    // 💬 CHAT (ANTI DUPLICADO)
     if (data.type === "chat") {
-      const texto = limpiarTexto(`${data.user} dice ${data.message}`);
-      if (texto) {
-        colaVoz.push(texto);
-        procesarColaVoz();
+      const firma = `${data.user}|${data.message}`;
+      const ahora = Date.now();
+      const ultimo = regalosProcesados.get(firma) || 0;
+
+      if (ahora - ultimo > 800) {
+        regalosProcesados.set(firma, ahora);
+        const texto = limpiarTexto(`${data.user} dice ${data.message}`);
+        if (texto) {
+          colaVoz.push(texto);
+          procesarColaVoz();
+        }
       }
     }
-  };
+  }
 
   // ===============================
   // 🔓 ACTIVAR SONIDO
