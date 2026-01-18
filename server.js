@@ -5,8 +5,11 @@ const WebSocket = require("ws");
 const app = express();
 app.use(express.static("public"));
 
-const server = app.listen(3000, () => {
-  console.log("Servidor activo en http://localhost:3000");
+// ⚠️ IMPORTANTE PARA RENDER
+const PORT = process.env.PORT || 3000;
+
+const server = app.listen(PORT, () => {
+  console.log("Servidor activo en puerto", PORT);
 });
 
 const wss = new WebSocket.Server({ server });
@@ -20,17 +23,22 @@ let nextMilestone = 1000; // cada 1000 likes
 
 // 📢 enviar a todos los clientes
 function broadcast(msg) {
+  const data = JSON.stringify(msg);
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(msg));
+      client.send(data);
     }
   });
 }
 
+// ===============================
 // 🔌 CLIENTES WEBSOCKET
+// ===============================
 wss.on("connection", ws => {
 
-  // enviar likes actuales al conectarse
+  console.log("🟢 Cliente conectado");
+
+  // enviar likes actuales
   ws.send(JSON.stringify({ type: "likes", total: totalLikes }));
 
   ws.on("message", async message => {
@@ -43,26 +51,29 @@ wss.on("connection", ws => {
 
     // 👤 SETEAR USUARIO TIKTOK DESDE EL FRONT
     if (data.type === "set-user") {
-      const user = data.user;
+      const user = data.user?.trim();
+
+      if (!user) return;
+
       console.log("🔄 Conectando a TikTok:", user);
 
       // reset likes
       totalLikes = 0;
       nextMilestone = 1000;
 
-      // cerrar conexión anterior
+      // 🔴 cerrar conexión anterior
       if (tiktok) {
         try {
           tiktok.disconnect();
         } catch {}
+        tiktok = null;
       }
 
-      // crear nueva conexión
+      // 🟢 nueva conexión
       tiktok = new WebcastPushConnection(user);
 
       // 🎁 REGALOS
       tiktok.on("gift", gift => {
-        console.log("🎁 Regalo:", gift.giftName);
         broadcast({
           gift: gift.giftName,
           user: gift.uniqueId
@@ -71,7 +82,6 @@ wss.on("connection", ws => {
 
       // 💬 CHAT
       tiktok.on("chat", chat => {
-        console.log("💬 Chat:", chat.nickname, chat.comment);
         broadcast({
           type: "chat",
           user: chat.nickname,
@@ -89,7 +99,6 @@ wss.on("connection", ws => {
         });
 
         if (totalLikes >= nextMilestone) {
-          console.log(`🎵 ${nextMilestone} likes alcanzados`);
           broadcast({
             type: "likes-sound",
             milestone: nextMilestone
@@ -101,9 +110,24 @@ wss.on("connection", ws => {
       try {
         await tiktok.connect();
         console.log("✅ Conectado a TikTok:", user);
+
+        // avisar al front
+        broadcast({
+          type: "status",
+          message: `Conectado a @${user}`
+        });
+
       } catch (err) {
         console.error("❌ Error TikTok:", err);
+        ws.send(JSON.stringify({
+          type: "error",
+          message: "No se pudo conectar al live"
+        }));
       }
     }
+  });
+
+  ws.on("close", () => {
+    console.log("🔴 Cliente desconectado");
   });
 });
