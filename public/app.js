@@ -1,5 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const ws = new WebSocket("ws://localhost:3000");
+const protocolo = location.protocol === "https:" ? "wss" : "ws";
+const ws = new WebSocket(`${protocolo}://${location.host}`);
+
   const regalosProcesados = new Map();
   const REGALO_VENTANA_MS = 400; // ventana de duplicado técnico
 
@@ -201,3 +203,4 @@ if (data.gift) {
     });
   };
 });
+
