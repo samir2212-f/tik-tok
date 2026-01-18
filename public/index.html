@@ -5,7 +5,6 @@
   <title>TikTok Live Sounds</title>
 
   <style>
-    /* 🔥 Estilo general */
     body {
       margin: 0;
       min-height: 100vh;
@@ -19,18 +18,23 @@
       text-align: center;
     }
 
-    /* 🎧 Título */
     h2 {
       font-size: 2.2rem;
       margin-bottom: 20px;
-      color: #ffffff;
       text-shadow:
         0 0 10px #00fff0,
         0 0 20px rgba(0, 255, 240, 0.6);
-      letter-spacing: 1px;
     }
 
-    /* 🔊 Botón */
+    input {
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-size: 1rem;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
     button {
       background: linear-gradient(135deg, #00fff0, #00b3ff);
       border: none;
@@ -44,87 +48,52 @@
       box-shadow:
         0 0 15px rgba(0, 255, 240, 0.7),
         0 0 30px rgba(0, 179, 255, 0.4);
+      margin-top: 10px;
     }
 
     button:hover {
       transform: scale(1.08);
-      box-shadow:
-        0 0 25px rgba(0, 255, 240, 1),
-        0 0 50px rgba(0, 179, 255, 0.8);
     }
 
-    button:active {
-      transform: scale(0.95);
-    }
-
-    /* 📊 Estados */
     p {
       margin-top: 15px;
       font-size: 1rem;
       padding: 10px 20px;
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(6px);
-      box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.05);
     }
 
     #estado {
       color: #ff4d4d;
-      text-shadow: 0 0 8px rgba(255, 77, 77, 0.7);
     }
 
     #likes {
       color: #00ff88;
       font-weight: bold;
-      text-shadow: 0 0 8px rgba(0, 255, 136, 0.8);
     }
   </style>
 </head>
-<script>
-  let ws;
-
-  function conectar() {
-    const user = document.getElementById("tiktokUser").value.trim();
-    if (!user) {
-      alert("Ingresa un usuario de TikTok");
-      return;
-    }
-
-    ws = new WebSocket("ws://localhost:3000");
-
-    ws.onopen = () => {
-      ws.send(JSON.stringify({
-        type: "set-user",
-        user
-      }));
-      document.getElementById("conexion").innerText =
-        `Conectado a @${user}`;
-    };
-
-    ws.onmessage = (e) => {
-      // aquí dejas lo que ya tienes
-    };
-  }
-</script>
 
 <body>
 
-<h2>🎧 TikTok Live Sounds</h2>
+  <h2>🎧 TikTok Live Sounds</h2>
 
-<input id="tiktokUser" placeholder="Usuario de TikTok" />
-<button onclick="conectar()">▶️ CONECTAR</button>
-<p id="conexion">Estado: desconectado</p>
+  <!-- 👤 USUARIO TIKTOK -->
+  <input id="user" placeholder="Usuario de TikTok" />
 
-<button onclick="activarSonido()">🔊 ACTIVAR SONIDO</button>
-<p id="estado">Estado: sonido NO activado</p>
-<p id="likes">Likes: 0</p>
+  <!-- 🔗 CONECTAR -->
+  <button onclick="conectar()">▶️ CONECTAR</button>
+  <p id="conexion">Estado: desconectado</p>
 
-<script src="app.js"></script>
+  <!-- 🔊 AUDIO -->
+  <button onclick="activarSonido()">🔊 ACTIVAR SONIDO</button>
+  <p id="estado">Estado: sonido NO activado</p>
 
-<!-- 🔄 Recarga automática cada 60 segundos -->
-<!-- <script>
-  setInterval(() => location.reload(), 10000);
-</script> -->
+  <!-- ❤️ LIKES -->
+  <p id="likes">❤️ Likes: 0</p>
+
+  <!-- 🚀 LÓGICA -->
+  <script src="app.js"></script>
 
 </body>
 </html>
