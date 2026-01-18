@@ -1,29 +1,48 @@
 document.addEventListener("DOMContentLoaded", () => {
-const protocolo = location.protocol === "https:" ? "wss" : "ws";
-const ws = new WebSocket(`${protocolo}://${location.host}`);
 
+  // 🌐 WEBSOCKET (Render / Local)
+  const protocolo = location.protocol === "https:" ? "wss" : "ws";
+  const ws = new WebSocket(`${protocolo}://${location.host}`);
+
+  // ===============================
+  // 🧬 ANTI DUPLICADOS
+  // ===============================
   const regalosProcesados = new Map();
-  const REGALO_VENTANA_MS = 400; // ventana de duplicado técnico
+  const REGALO_VENTANA_MS = 400;
 
+  setInterval(() => {
+    const ahora = Date.now();
+    for (const [k, t] of regalosProcesados) {
+      if (ahora - t > 5000) regalosProcesados.delete(k);
+    }
+  }, 5000);
+
+  // ===============================
+  // 🔊 ESTADO
+  // ===============================
   let audioActivado = false;
   let totalLikes = 0;
 
   const estadoEl = document.getElementById("estado");
   const likesEl = document.getElementById("likes");
+  const conexionEl = document.getElementById("conexion");
 
-  // Revisar si el audio estaba activado antes
   if (localStorage.getItem("audioActivado") === "true") {
     audioActivado = true;
     if (estadoEl) estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
   }
 
+  // ===============================
   // 🗣️ VOCES
+  // ===============================
   let vocesDisponibles = [];
   speechSynthesis.onvoiceschanged = () => {
     vocesDisponibles = speechSynthesis.getVoices();
   };
 
-  // 🎁 SONIDOS DE REGALOS + LIKES
+  // ===============================
+  // 🎁 SONIDOS
+  // ===============================
   const giftSounds = {
     rose: "/sounds/Rose.mp3",
     heartme: "/sounds/Heart.mp3",
@@ -46,11 +65,13 @@ const ws = new WebSocket(`${protocolo}://${location.host}`);
     loveyousomuch: "/sounds/Loveyousomuch.mp3",
     hatandmustache: "/sounds/HatandMustache.mp3",
     gorra: "/sounds/Gorra.mp3",
-    Whalediving: "/sounds/Whalediving.mp3",
+    whalediving: "/sounds/Whalediving.mp3",
     likes: "/sounds/Likes.mp3"
   };
 
+  // ===============================
   // 🧹 LIMPIAR TEXTO
+  // ===============================
   function limpiarTexto(texto) {
     return texto
       .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
@@ -60,12 +81,12 @@ const ws = new WebSocket(`${protocolo}://${location.host}`);
   }
 
   // ===============================
-  // 🔊 SISTEMA DE COLA DE VOZ
+  // 🔊 COLA DE VOZ
   // ===============================
   let colaVoz = [];
   let hablando = false;
 
-  function procesarCola() {
+  function procesarColaVoz() {
     if (!audioActivado || hablando || colaVoz.length === 0) return;
 
     hablando = true;
@@ -77,30 +98,23 @@ const ws = new WebSocket(`${protocolo}://${location.host}`);
 
     voz.onend = () => {
       hablando = false;
-      setTimeout(procesarCola, 200);
+      setTimeout(procesarColaVoz, 200);
     };
 
     voz.onerror = () => {
-      speechSynthesis.cancel();
       hablando = false;
-      setTimeout(procesarCola, 500);
+      speechSynthesis.cancel();
+      setTimeout(procesarColaVoz, 500);
     };
 
     speechSynthesis.speak(voz);
   }
 
   // ===============================
-  // 🔊 SISTEMA DE COLA DE SONIDOS
+  // 🔊 COLA DE SONIDOS
   // ===============================
   let colaSonidos = [];
   let sonidoReproduciendo = false;
-// 🧹 LIMPIEZA DE REGALOS PROCESADOS (ANTI DUPLICADOS TÉCNICOS)
-setInterval(() => {
-  const ahora = Date.now();
-  for (const [k, t] of regalosProcesados) {
-    if (ahora - t > 5000) regalosProcesados.delete(k);
-  }
-}, 5000);
 
   function procesarColaSonidos() {
     if (!audioActivado || sonidoReproduciendo || colaSonidos.length === 0) return;
@@ -108,7 +122,7 @@ setInterval(() => {
     sonidoReproduciendo = true;
     const sonidoUrl = colaSonidos.shift();
     const audio = new Audio(sonidoUrl);
-    audio.volume = 0.3; // 👈 baja regalos (0.0 a 1.0)
+    audio.volume = 0.3;
 
     audio.onended = () => {
       sonidoReproduciendo = false;
@@ -125,37 +139,37 @@ setInterval(() => {
     });
   }
 
+  // ===============================
   // 📡 MENSAJES DEL SERVIDOR
+  // ===============================
+  ws.onopen = () => {
+    if (conexionEl) conexionEl.innerText = "🟢 Conectado al servidor";
+  };
+
+  ws.onclose = () => {
+    if (conexionEl) conexionEl.innerText = "🔴 Desconectado";
+  };
+
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
-    // 🎁 REGALOS → COLA (ANTI DUPLICADO REAL)
-if (data.gift) {
+    // 🎁 REGALOS
+    if (data.gift) {
+      const giftName = data.gift.replace(/\s+/g, "").toLowerCase();
+      const sonidoUrl = giftSounds[giftName];
 
-  const giftName = data.gift.replace(/\s+/g, "").toLowerCase();
-  const sonidoUrl = giftSounds[giftName];
+      if (sonidoUrl) {
+        const firma = `${data.user}|${giftName}`;
+        const ahora = Date.now();
+        const ultimo = regalosProcesados.get(firma) || 0;
 
-  if (sonidoUrl) {
-    const usuario = data.user || "anon";
-    const ahora = Date.now();
-
-    // 🧬 huella única del regalo
-    const firma = `${usuario}|${giftName}`;
-    const ultimo = regalosProcesados.get(firma) || 0;
-
-    // ⛔ duplicado técnico
-    if (ahora - ultimo >= REGALO_VENTANA_MS) {
-      regalosProcesados.set(firma, ahora);
-      colaSonidos.push(sonidoUrl);
-      procesarColaSonidos();
-
-      // 🧪 DEBUG (temporal)
-      console.log("REGALO OK:", data.user, data.gift);
+        if (ahora - ultimo >= REGALO_VENTANA_MS) {
+          regalosProcesados.set(firma, ahora);
+          colaSonidos.push(sonidoUrl);
+          procesarColaSonidos();
+        }
+      }
     }
-  }
-}
-
-
 
     // ❤️ LIKES
     if (data.type === "likes") {
@@ -163,31 +177,31 @@ if (data.gift) {
       if (likesEl) likesEl.innerText = `❤️ Likes: ${totalLikes}`;
     }
 
-    // 🔊 SONIDO CADA 1000 LIKES → COLA
+    // 🔊 LIKES SOUND
     if (data.type === "likes-sound" && audioActivado) {
       colaSonidos.push(giftSounds.likes);
       procesarColaSonidos();
     }
 
-    // 💬 CHAT → COLA DE VOZ
+    // 💬 CHAT
     if (data.type === "chat") {
       const texto = limpiarTexto(`${data.user} dice ${data.message}`);
       if (texto) {
         colaVoz.push(texto);
-        procesarCola();
+        procesarColaVoz();
       }
     }
   };
 
+  // ===============================
   // 🔓 ACTIVAR SONIDO
+  // ===============================
   window.activarSonido = function () {
     const testAudio = new Audio("/sounds/Rose.mp3");
 
     testAudio.play().then(() => {
       testAudio.pause();
-      testAudio.currentTime = 0;
       audioActivado = true;
-
       localStorage.setItem("audioActivado", "true");
 
       colaVoz = [];
@@ -195,35 +209,32 @@ if (data.gift) {
       hablando = false;
       sonidoReproduciendo = false;
 
-      const voz = new SpeechSynthesisUtterance("Sonido activado correctamente");
-      voz.lang = "es-ES";
-      speechSynthesis.speak(voz);
+      speechSynthesis.speak(
+        new SpeechSynthesisUtterance("Sonido activado correctamente")
+      );
 
       if (estadoEl) estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
     });
   };
-  // 🔗 CONECTAR A TIKTOK DESDE EL INPUT
-window.conectar = function () {
-  const input = document.getElementById("user");
-  if (!input) {
-    alert("No existe el input de usuario");
-    return;
-  }
 
-  const user = input.value.trim();
-  if (!user) {
-    alert("Ingresa un usuario de TikTok");
-    return;
-  }
+  // ===============================
+  // 🔗 CONECTAR USUARIO
+  // ===============================
+  window.conectar = function () {
+    const input = document.getElementById("user");
+    const user = input.value.trim();
 
-  ws.send(JSON.stringify({
-    type: "set-user",
-    user
-  }));
+    if (!user) {
+      alert("Ingresa un usuario de TikTok");
+      return;
+    }
 
-  console.log("➡️ Usuario enviado al servidor:", user);
-};
+    ws.send(JSON.stringify({
+      type: "set-user",
+      user
+    }));
+
+    if (conexionEl) conexionEl.innerText = `🟢 Conectado a @${user}`;
+  };
 
 });
-
-
