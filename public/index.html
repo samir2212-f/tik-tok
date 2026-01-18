@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>TikTok Live Sounds</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
@@ -33,18 +34,20 @@
       font-size: 1rem;
       margin-bottom: 15px;
       text-align: center;
+      outline: none;
+      width: 220px;
     }
 
     button {
       background: linear-gradient(135deg, #00fff0, #00b3ff);
       border: none;
       border-radius: 12px;
-      padding: 15px 30px;
+      padding: 14px 26px;
       font-size: 1rem;
       font-weight: bold;
       color: #000;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.25s ease;
       box-shadow:
         0 0 15px rgba(0, 255, 240, 0.7),
         0 0 30px rgba(0, 179, 255, 0.4);
@@ -52,15 +55,16 @@
     }
 
     button:hover {
-      transform: scale(1.08);
+      transform: scale(1.07);
     }
 
     p {
-      margin-top: 15px;
-      font-size: 1rem;
-      padding: 10px 20px;
+      margin-top: 12px;
+      font-size: 0.95rem;
+      padding: 8px 18px;
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.05);
+      min-width: 220px;
     }
 
     #estado {
@@ -71,6 +75,11 @@
       color: #00ff88;
       font-weight: bold;
     }
+
+    #conexion {
+      color: #ffd966;
+      font-weight: bold;
+    }
   </style>
 </head>
 
@@ -79,11 +88,15 @@
   <h2>🎧 TikTok Live Sounds</h2>
 
   <!-- 👤 USUARIO TIKTOK -->
-  <input id="user" placeholder="Usuario de TikTok" />
+  <input
+    id="user"
+    placeholder="Usuario de TikTok"
+    autocomplete="off"
+  />
 
   <!-- 🔗 CONECTAR -->
   <button onclick="conectar()">▶️ CONECTAR</button>
-  <p id="conexion">Estado: desconectado</p>
+  <p id="conexion">🔴 Desconectado</p>
 
   <!-- 🔊 AUDIO -->
   <button onclick="activarSonido()">🔊 ACTIVAR SONIDO</button>
