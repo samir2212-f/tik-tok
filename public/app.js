@@ -19,31 +19,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===============================
-  // 🌐 WEBSOCKET
-  // ===============================
-  const wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
-ws = new WebSocket(wsUrl);
+// 🌐 WEBSOCKET (CORREGIDO)
+// ===============================
+let ws;
 
+function conectarWS() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
 
-  function conectarWS() {
-    if (ws && ws.readyState === WebSocket.OPEN) return;
+  const wsUrl =
+    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
 
-    ws = new WebSocket(`${protocolo}://${location.host}`);
+  ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => {
-      conexionEl.innerText = "🟢 Conectado al servidor";
-    };
+  ws.onopen = () => {
+    console.log("🟢 WebSocket conectado");
+    conexionEl.innerText = "🟢 Conectado al servidor";
+  };
 
-    ws.onclose = () => {
-      conexionEl.innerText = "🔴 Desconectado";
-      setTimeout(conectarWS, 3000);
-    };
+  ws.onclose = () => {
+    console.log("🔴 WebSocket desconectado");
+    conexionEl.innerText = "🔴 Desconectado";
+    setTimeout(conectarWS, 3000);
+  };
 
-    ws.onerror = () => ws.close();
-    ws.onmessage = manejarMensaje;
-  }
+  ws.onerror = (e) => {
+    console.error("❌ WebSocket error", e);
+  };
 
-  conectarWS();
+  ws.onmessage = manejarMensaje;
+}
+
+conectarWS();
+
 
   // ===============================
   // 🎚 VOLUMEN
@@ -159,10 +166,10 @@ ws = new WebSocket(wsUrl);
   // ===============================
   // 📡 MENSAJES
   // ===============================
-  function manejarMensaje(event) {
-    console.log("📩 Mensaje recibido:", data);
+ function manejarMensaje(event) {
+  const data = JSON.parse(event.data);
+  console.log("📩 Mensaje recibido:", data);
 
-    const data = JSON.parse(event.data);
 
     // 🟢🔴 ESTADO TIKTOK
     if (data.type === "tiktok-status") {
