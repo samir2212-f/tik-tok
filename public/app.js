@@ -197,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (data.type === "gift") {
 
       const gift = data.gift.replace(/\s+/g, "").toLowerCase();
-      const firma = `${data.user}|${gift}|${Math.floor(Date.now() / 2000)}`;
+      const firma = `${data.user}|${gift}|${data.count}`;
 
       if (regalosProcesados.has(firma)) return;
 
@@ -216,23 +216,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 💬 CHAT
-    if (data.type === "chat") {
-     const firma = `${data.user}|${gift}|${data.count}`;
+if (data.type === "chat") {
+  const firma = `${data.user}|${data.message}`;
 
-      if (chatsProcesados.has(firma)) return;
+  if (chatsProcesados.has(firma)) return;
 
-      chatsProcesados.set(firma, Date.now());
+  chatsProcesados.set(firma, Date.now());
 
-      const voz = new SpeechSynthesisUtterance(
-        `${data.user} dice ${data.message}`
-      );
+  const voz = new SpeechSynthesisUtterance(
+    `${data.user} dice ${data.message}`
+  );
 
-      const esp = vocesDisponibles.find(v => v.lang.startsWith("es"));
-      if (esp) voz.voice = esp;
+  const esp = vocesDisponibles.find(v => v.lang.startsWith("es"));
+  if (esp) voz.voice = esp;
 
-      speechSynthesis.speak(voz);
-    }
-  }
+  speechSynthesis.speak(voz);
+}
+
 
   // ===============================
   // 🔓 ACTIVAR SONIDO
@@ -257,6 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
 });
+
 
 
 
