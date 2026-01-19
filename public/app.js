@@ -53,11 +53,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ===============================
-  // 🧬 ANTI DUPLICADOS FUERTE
+  // 🧬 ANTI DUPLICADOS
   // ===============================
   const regalosProcesados = new Map();
   const chatsProcesados = new Map();
-  const REGALO_VENTANA_MS = 2500; // ⬅ CLAVE
+  const REGALO_VENTANA_MS = 2500;
 
   setInterval(() => {
     const ahora = Date.now();
@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function manejarMensaje(event) {
     const data = JSON.parse(event.data);
 
-    // 🟢🔴 TikTok
+    // 🟢🔴 ESTADO TIKTOK
     if (data.type === "tiktok-status") {
       estadoTikTokEl.innerText = data.connected
         ? "🟢 TikTok conectado"
@@ -138,15 +138,38 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // 🎁 REGALOS (ANTI DUPLICADO REAL)
+    // ❤️ LIKES (MOSTRAR)
+    if (data.type === "likes") {
+      totalLikes = data.total;
+      if (likesEl) {
+        likesEl.innerText = `❤️ Likes: ${totalLikes}`;
+      }
+      return;
+    }
+
+    // 🔊 SONIDO DE LIKES (ANTI SPAM)
+    if (data.type === "likes-sound") {
+      const ahora = Date.now();
+      const ultimo = chatsProcesados.get("likes") || 0;
+
+      if (ahora - ultimo > 1500) {
+        chatsProcesados.set("likes", ahora);
+        if (audioActivado && giftSounds.likes) {
+          colaSonidos.push(giftSounds.likes);
+          procesarSonidos();
+        }
+      }
+      return;
+    }
+
+    // 🎁 REGALOS
     if (data.gift) {
       const gift = data.gift.replace(/\s+/g, "").toLowerCase();
       const firma = `${data.user}|${gift}|${Math.floor(Date.now() / 2000)}`;
-      const ahora = Date.now();
 
       if (regalosProcesados.has(firma)) return;
 
-      regalosProcesados.set(firma, ahora);
+      regalosProcesados.set(firma, Date.now());
 
       contadorRegalos[gift] = (contadorRegalos[gift] || 0) + 1;
       actualizarRegalosUI();
@@ -155,16 +178,16 @@ document.addEventListener("DOMContentLoaded", () => {
         colaSonidos.push(giftSounds[gift]);
         procesarSonidos();
       }
+      return;
     }
 
     // 💬 CHAT
     if (data.type === "chat") {
       const firma = `${data.user}|${data.message}`;
-      const ahora = Date.now();
-
       if (chatsProcesados.has(firma)) return;
 
-      chatsProcesados.set(firma, ahora);
+      chatsProcesados.set(firma, Date.now());
+
       const voz = new SpeechSynthesisUtterance(
         `${data.user} dice ${data.message}`
       );
@@ -197,4 +220,5 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!user) return alert("Ingresa usuario");
     ws.send(JSON.stringify({ type: "set-user", user }));
   };
+
 });
