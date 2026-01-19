@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   // ===============================
-  // 📊 UI
+  // 📊 UI ELEMENTOS
   // ===============================
   const estadoTikTokEl = document.getElementById("estadoTikTok");
   const volumenEl = document.getElementById("volumen");
@@ -14,70 +14,63 @@ document.addEventListener("DOMContentLoaded", () => {
   let totalLikes = 0;
   let audioActivado = localStorage.getItem("audioActivado") === "true";
 
-  if (audioActivado) {
+  if (audioActivado && estadoEl) {
     estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
   }
 
   // ===============================
-// 🌐 WEBSOCKET (CORREGIDO)
-// ===============================
-let ws;
+  // 🌐 WEBSOCKET (LOCAL / RENDER)
+  // ===============================
+  const protocolo = location.protocol === "https:" ? "wss" : "ws";
+  let ws;
 
-function conectarWS() {
-  if (ws && ws.readyState === WebSocket.OPEN) return;
+  function conectarWS() {
+    ws = new WebSocket(`${protocolo}://${location.host}`);
 
-  const wsUrl =
-    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+    ws.onopen = () => {
+      if (conexionEl) conexionEl.innerText = "🟢 Conectado al servidor";
+    };
 
-  ws = new WebSocket(wsUrl);
+    ws.onclose = () => {
+      if (conexionEl) conexionEl.innerText = "🔴 Desconectado";
+      setTimeout(conectarWS, 3000);
+    };
 
-  ws.onopen = () => {
-    console.log("🟢 WebSocket conectado");
-    conexionEl.innerText = "🟢 Conectado al servidor";
-  };
+    ws.onerror = () => ws.close();
+    ws.onmessage = manejarMensaje;
+  }
 
-  ws.onclose = () => {
-    console.log("🔴 WebSocket desconectado");
-    conexionEl.innerText = "🔴 Desconectado";
-    setTimeout(conectarWS, 3000);
-  };
-
-  ws.onerror = (e) => {
-    console.error("❌ WebSocket error", e);
-  };
-
-  ws.onmessage = manejarMensaje;
-}
-
-conectarWS();
-
+  conectarWS();
 
   // ===============================
   // 🎚 VOLUMEN
   // ===============================
-  volumenEl.value = volumenActual;
-  volumenEl.addEventListener("input", () => {
-    volumenActual = parseFloat(volumenEl.value);
-  });
+  if (volumenEl) {
+    volumenEl.value = volumenActual;
+    volumenEl.addEventListener("input", () => {
+      volumenActual = parseFloat(volumenEl.value);
+    });
+  }
 
   // ===============================
   // 🧬 ANTI DUPLICADOS
   // ===============================
   const regalosProcesados = new Map();
   const chatsProcesados = new Map();
-  const REGALO_VENTANA_MS = 2500;
+  const REGALO_VENTANA_MS = 400;
 
   setInterval(() => {
     const ahora = Date.now();
-    for (const [k, t] of regalosProcesados)
-      if (ahora - t > 15000) regalosProcesados.delete(k);
-
-    for (const [k, t] of chatsProcesados)
-      if (ahora - t > 15000) chatsProcesados.delete(k);
+    for (const [k, t] of regalosProcesados) {
+      if (ahora - t > 5000) regalosProcesados.delete(k);
+    }
+    for (const [k, t] of chatsProcesados) {
+      if (ahora - t > 5000) chatsProcesados.delete(k);
+    }
   }, 5000);
 
   // ===============================
-  // 🗣 VOCES
+  // 🗣️ VOCES
   // ===============================
   let vocesDisponibles = [];
   speechSynthesis.onvoiceschanged = () => {
@@ -109,148 +102,143 @@ conectarWS();
     loveyousomuch: "/sounds/Loveyousomuch.mp3",
     hatandmustache: "/sounds/HatandMustache.mp3",
     gorra: "/sounds/Gorra.mp3",
-    Whalediving: "/sounds/Whalediving.mp3",
+    whalediving: "/sounds/Whalediving.mp3",
     likes: "/sounds/Likes.mp3"
   };
 
   // ===============================
-  // 📊 CONTADOR REGALOS
+  // 📊 CONTADOR DE REGALOS
   // ===============================
   const contadorRegalos = {};
 
   function actualizarRegalosUI() {
-  regalosListaEl.innerHTML = "";
-
-  Object.entries(contadorRegalos).forEach(([g, c]) => {
-    const div = document.createElement("div");
-    div.className = "regalo-item";
-
-    const nombre = document.createElement("span");
-    nombre.className = "regalo-nombre";
-    nombre.innerText = g;
-
-    const cantidad = document.createElement("span");
-    cantidad.className = "regalo-cantidad";
-    cantidad.innerText = c;
-
-    div.appendChild(nombre);
-    div.appendChild(cantidad);
-    regalosListaEl.appendChild(div);
-  });
-}
-
-
-  // ===============================
-  // 🔊 COLA SONIDOS
-  // ===============================
-  let colaSonidos = [];
-  let reproduciendo = false;
-
-  function procesarSonidos() {
-    if (!audioActivado || reproduciendo || colaSonidos.length === 0) return;
-
-    reproduciendo = true;
-    const audio = new Audio(colaSonidos.shift());
-    audio.volume = volumenActual;
-
-    audio.onended = audio.onerror = () => {
-      reproduciendo = false;
-      setTimeout(procesarSonidos, 100);
-    };
-
-    audio.play().catch(() => {
-      reproduciendo = false;
+    regalosListaEl.innerHTML = "";
+    Object.entries(contadorRegalos).forEach(([regalo, cantidad]) => {
+      const div = document.createElement("div");
+      div.innerText = `🎁 ${regalo}: ${cantidad}`;
+      regalosListaEl.appendChild(div);
     });
   }
 
   // ===============================
-  // 📡 MENSAJES
+  // 🔊 COLA DE VOZ
   // ===============================
- function manejarMensaje(event) {
-  const data = JSON.parse(event.data);
-  console.log("📩 Mensaje recibido:", data);
+  let colaVoz = [];
+  let hablando = false;
 
+  function procesarColaVoz() {
+    if (!audioActivado || hablando || colaVoz.length === 0) return;
 
-    // 🟢🔴 ESTADO TIKTOK
+    hablando = true;
+    const texto = colaVoz.shift();
+    const voz = new SpeechSynthesisUtterance(texto);
+
+    const vozEsp = vocesDisponibles.find(v => v.lang.startsWith("es"));
+    if (vozEsp) voz.voice = vozEsp;
+
+    voz.onend = () => {
+      hablando = false;
+      setTimeout(procesarColaVoz, 200);
+    };
+
+    voz.onerror = () => {
+      hablando = false;
+      speechSynthesis.cancel();
+      setTimeout(procesarColaVoz, 500);
+    };
+
+    speechSynthesis.speak(voz);
+  }
+
+  // ===============================
+  // 🔊 COLA DE SONIDOS
+  // ===============================
+  let colaSonidos = [];
+  let sonidoReproduciendo = false;
+
+  function procesarColaSonidos() {
+    if (!audioActivado || sonidoReproduciendo || colaSonidos.length === 0) return;
+
+    sonidoReproduciendo = true;
+    const audio = new Audio(colaSonidos.shift());
+    audio.volume = volumenActual;
+
+    audio.onended = audio.onerror = () => {
+      sonidoReproduciendo = false;
+      setTimeout(procesarColaSonidos, 80);
+    };
+
+    audio.play().catch(() => {
+      sonidoReproduciendo = false;
+    });
+  }
+
+  // ===============================
+  // 📡 MENSAJES DEL SERVIDOR
+  // ===============================
+  function manejarMensaje(event) {
+    const data = JSON.parse(event.data);
+
+    // 🔴🟢 ESTADO TIKTOK
     if (data.type === "tiktok-status") {
       estadoTikTokEl.innerText = data.connected
-        ? "🟢 TikTok conectado"
-        : "🔴 TikTok desconectado";
-      return;
-    }
-
-    // ❤️ LIKES (MOSTRAR)
-    if (data.type === "likes") {
-      totalLikes = data.total;
-      if (likesEl) {
-        likesEl.innerText = `❤️ Likes: ${totalLikes}`;
-      }
-      return;
-    }
-
-    // 🔊 SONIDO DE LIKES (ANTI SPAM)
-    if (data.type === "likes-sound") {
-      const ahora = Date.now();
-      const ultimo = chatsProcesados.get("likes") || 0;
-
-      if (ahora - ultimo > 1500) {
-        chatsProcesados.set("likes", ahora);
-        if (audioActivado && giftSounds.likes) {
-          colaSonidos.push(giftSounds.likes);
-          procesarSonidos();
-        }
-      }
+        ? "🟢 TikTok: conectado"
+        : "🔴 TikTok: desconectado";
       return;
     }
 
     // 🎁 REGALOS
-    if (data.type === "gift") {
-
-      const gift = data.gift.replace(/\s+/g, "").toLowerCase();
-      const firma = `${data.user}|${gift}|${data.count}`;
-
-      if (regalosProcesados.has(firma)) return;
-
-      regalosProcesados.set(firma, Date.now());
-
-      contadorRegalos[gift] =
-  (contadorRegalos[gift] || 0) + (data.count || 1);
-
+    if (data.gift) {
+      const giftName = data.gift.replace(/\s+/g, "").toLowerCase();
+      contadorRegalos[giftName] = (contadorRegalos[giftName] || 0) + 1;
       actualizarRegalosUI();
 
-      if (giftSounds[gift]) {
-        colaSonidos.push(giftSounds[gift]);
-        procesarSonidos();
+      const sonidoUrl = giftSounds[giftName];
+      if (!sonidoUrl) return;
+
+      const firma = `${data.user}|${giftName}`;
+      const ahora = Date.now();
+      const ultimo = regalosProcesados.get(firma) || 0;
+
+      if (ahora - ultimo >= REGALO_VENTANA_MS) {
+        regalosProcesados.set(firma, ahora);
+        colaSonidos.push(sonidoUrl);
+        procesarColaSonidos();
       }
-      return;
     }
 
-    // 💬 CHAT
-if (data.type === "chat") {
-  const firma = `${data.user}|${data.message}`;
+    // ❤️ LIKES
+    if (data.type === "likes") {
+      totalLikes = data.total;
+      likesEl.innerText = `❤️ Likes: ${totalLikes}`;
+    }
 
-  if (chatsProcesados.has(firma)) return;
+    if (data.type === "likes-sound" && audioActivado) {
+      colaSonidos.push(giftSounds.likes);
+      procesarColaSonidos();
+    }
 
-  chatsProcesados.set(firma, Date.now());
+    // 💬 CHAT (ANTI DUPLICADO)
+    if (data.type === "chat") {
+      const firma = `${data.user}|${data.message}`;
+      const ahora = Date.now();
+      const ultimo = chatsProcesados.get(firma) || 0;
 
-  const voz = new SpeechSynthesisUtterance(
-    `${data.user} dice ${data.message}`
-  );
-
-  const esp = vocesDisponibles.find(v => v.lang.startsWith("es"));
-  if (esp) voz.voice = esp;
-
-  speechSynthesis.speak(voz);
-}
-
+      if (ahora - ultimo > 800) {
+        chatsProcesados.set(firma, ahora);
+        colaVoz.push(`${data.user} dice ${data.message}`);
+        procesarColaVoz();
+      }
+    }
+  }
 
   // ===============================
   // 🔓 ACTIVAR SONIDO
   // ===============================
-  window.activarSonido = () => {
-    const a = new Audio("/sounds/Rose.mp3");
-    a.play().then(() => {
-      a.pause();
+  window.activarSonido = function () {
+    const test = new Audio("/sounds/Rose.mp3");
+    test.play().then(() => {
+      test.pause();
       audioActivado = true;
       localStorage.setItem("audioActivado", "true");
       estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
@@ -258,26 +246,14 @@ if (data.type === "chat") {
   };
 
   // ===============================
-  // 🔗 CONECTAR
+  // 🔗 CONECTAR USUARIO
   // ===============================
-  window.conectar = () => {
-  const user = document.getElementById("user").value.trim();
-  if (!user) return alert("Ingresa usuario");
+  window.conectar = function () {
+    const user = document.getElementById("user").value.trim();
+    if (!user) return alert("Ingresa un usuario de TikTok");
 
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    alert("Aún no conectado al servidor, espera 1 segundo");
-    return;
-  }
-
-  ws.send(JSON.stringify({
-    type: "set-user",
-    user
-  }));
-};
+    ws.send(JSON.stringify({ type: "set-user", user }));
+    conexionEl.innerText = `🟢 Conectado a @${user}`;
+  };
 
 });
-
-
-
-
-
