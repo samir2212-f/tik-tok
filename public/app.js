@@ -163,7 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 🎁 REGALOS
-    if (data.gift) {
+    if (data.type === "gift") {
+
       const gift = data.gift.replace(/\s+/g, "").toLowerCase();
       const firma = `${data.user}|${gift}|${Math.floor(Date.now() / 2000)}`;
 
@@ -171,7 +172,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       regalosProcesados.set(firma, Date.now());
 
-      contadorRegalos[gift] = (contadorRegalos[gift] || 0) + 1;
+      contadorRegalos[gift] =
+  (contadorRegalos[gift] || 0) + (data.count || 1);
+
       actualizarRegalosUI();
 
       if (giftSounds[gift]) {
@@ -183,7 +186,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 💬 CHAT
     if (data.type === "chat") {
-      const firma = `${data.user}|${data.message}`;
+     const firma = `${data.user}|${gift}|${data.count}`;
+
       if (chatsProcesados.has(firma)) return;
 
       chatsProcesados.set(firma, Date.now());
@@ -222,3 +226,4 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
 });
+
