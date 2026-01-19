@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===============================
   // 📊 UI ELEMENTOS
   // ===============================
+  const ultimoCombo = new Map();
   const estadoTikTokEl = document.getElementById("estadoTikTok");
   const volumenEl = document.getElementById("volumen");
   const regalosListaEl = document.getElementById("regalosLista");
@@ -192,9 +193,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 🎁 REGALOS
     if (data.gift) {
-      const giftName = data.gift.replace(/\s+/g, "").toLowerCase();
-      contadorRegalos[giftName] = (contadorRegalos[giftName] || 0) + 1;
-      actualizarRegalosUI();
+     const comboActual = data.repeatCount || 1;
+const comboAnterior = ultimoCombo.get(data.user + giftName) || 0;
+
+const diferencia = comboActual - comboAnterior;
+
+if (diferencia > 0) {
+  contadorRegalos[giftName] =
+    (contadorRegalos[giftName] || 0) + diferencia;
+
+  actualizarRegalosUI();
+
+  for (let i = 0; i < diferencia; i++) {
+    colaSonidos.push(giftSounds[giftName]);
+  }
+  procesarColaSonidos();
+}
+
+ultimoCombo.set(data.user + giftName, comboActual);
+
 
       const sonidoUrl = giftSounds[giftName];
       if (!sonidoUrl) return;
@@ -262,5 +279,6 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
 });
+
 
 
