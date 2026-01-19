@@ -24,12 +24,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const protocolo = location.protocol === "https:" ? "wss" : "ws";
   let ws;
 
-  function conectarWS() {
-    ws = new WebSocket(`${protocolo}://${location.host}`);
+ function conectarWS() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
 
-    ws.onopen = () => {
-      if (conexionEl) conexionEl.innerText = "🟢 Conectado al servidor";
-    };
+  ws = new WebSocket(`${protocolo}://${location.host}`);
+
+  ws.onopen = () => {
+    conexionEl.innerText = "🟢 Conectado al servidor";
+  };
+
 
     ws.onclose = () => {
       if (conexionEl) conexionEl.innerText = "🔴 Desconectado";
@@ -257,3 +260,4 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
 });
+
