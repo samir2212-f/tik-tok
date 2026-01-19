@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===============================
   const regalosProcesados = new Map();
   const chatsProcesados = new Map();
-  const REGALO_VENTANA_MS = 400;
+  const REGALO_VENTANA_MS = 800;
 
   setInterval(() => {
     const ahora = Date.now();
@@ -199,7 +199,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const sonidoUrl = giftSounds[giftName];
       if (!sonidoUrl) return;
 
-      const firma = `${data.user}|${giftName}`;
+     const repeat = data.repeatCount || 1;
+    const firma = `${data.user}|${giftName}|${repeat}`;
+
       const ahora = Date.now();
       const ultimo = regalosProcesados.get(firma) || 0;
 
@@ -260,4 +262,5 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
 });
+
 
