@@ -83,7 +83,25 @@ document.addEventListener("DOMContentLoaded", () => {
     rose: "/sounds/Rose.mp3",
     heartme: "/sounds/Heart.mp3",
     perfume: "/sounds/perfume.mp3",
+    bearlove: "/sounds/Bearlove.mp3",
+    mishkateddybear: "/sounds/Bearlove.mp3",
+    mishkabear: "/sounds/Bearlove.mp3",
     moneygun: "/sounds/MoneyGun.mp3",
+    papercrane: "/sounds/PaperCrane.mp3",
+    doughnut: "/sounds/Doughnut.mp3",
+    corgi: "/sounds/Corgi.mp3",
+    confetti: "/sounds/Confetti.mp3",
+    fingerheart: "/sounds/FingerHeart.mp3",
+    loveyou: "/sounds/LoveYou.mp3",
+    handheart: "/sounds/HandHeart.mp3",
+    bffnecklace: "/sounds/bffnecklace.mp3",
+    rosa: "/sounds/Rosa.mp3",
+    hearts: "/sounds/Hearts.mp3",
+    coral: "/sounds/Coral.mp3",
+    loveyousomuch: "/sounds/Loveyousomuch.mp3",
+    hatandmustache: "/sounds/HatandMustache.mp3",
+    gorra: "/sounds/Gorra.mp3",
+    Whalediving: "/sounds/Whalediving.mp3",
     likes: "/sounds/Likes.mp3"
   };
 
@@ -226,4 +244,5 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
 });
+
 
