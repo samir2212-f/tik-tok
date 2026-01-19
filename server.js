@@ -74,11 +74,22 @@ wss.on("connection", ws => {
 
       // 🎁 REGALOS
       tiktok.on("gift", gift => {
-        broadcast({
-          gift: gift.giftName,
-          user: gift.uniqueId
-        });
-      });
+
+  // ⚠️ ignorar eventos intermedios
+  if (!gift.repeatEnd) return;
+
+  console.log(
+    `🎁 Regalo FINAL: ${gift.giftName} x${gift.repeatCount}`
+  );
+
+  broadcast({
+    type: "gift",
+    gift: gift.giftName,
+    count: gift.repeatCount || 1,
+    user: gift.uniqueId
+  });
+});
+
 
       // 💬 CHAT
       tiktok.on("chat", chat => {
@@ -131,3 +142,4 @@ wss.on("connection", ws => {
     console.log("🔴 Cliente desconectado");
   });
 });
+
