@@ -5,23 +5,28 @@ const WebSocket = require("ws");
 const app = express();
 app.use(express.static("public"));
 
-// ⚠️ IMPORTANTE PARA RENDER
+// ⚠️ Render / Local
 const PORT = process.env.PORT || 3000;
 
 const server = app.listen(PORT, () => {
-  console.log("Servidor activo en puerto", PORT);
+  console.log("🚀 Servidor activo en puerto", PORT);
 });
 
 const wss = new WebSocket.Server({ server });
 
-// 🔗 conexión dinámica a TikTok
+// ===============================
+// 🔗 TIKTOK
+// ===============================
 let tiktok = null;
+let currentUser = null;
 
-// 🖤 CONTADOR DE LIKES
+// ❤️ LIKES
 let totalLikes = 0;
-let nextMilestone = 1000; // cada 1000 likes
+let nextMilestone = 1000;
 
-// 📢 enviar a todos los clientes
+// ===============================
+// 📢 BROADCAST
+// ===============================
 function broadcast(msg) {
   const data = JSON.stringify(msg);
   wss.clients.forEach(client => {
@@ -32,10 +37,9 @@ function broadcast(msg) {
 }
 
 // ===============================
-// 🔌 CLIENTES WEBSOCKET
+// 🔌 WEBSOCKET CLIENTES
 // ===============================
 wss.on("connection", ws => {
-
   console.log("🟢 Cliente conectado");
 
   // enviar likes actuales
@@ -49,17 +53,21 @@ wss.on("connection", ws => {
       return;
     }
 
-    // 👤 SETEAR USUARIO TIKTOK DESDE EL FRONT
+    // ===============================
+    // 👤 SET USER
+    // ===============================
     if (data.type === "set-user") {
       const user = data.user?.trim();
-
       if (!user) return;
 
-      console.log("🔄 Conectando a TikTok:", user);
+      // evitar reconectar al mismo usuario
+      if (currentUser === user && tiktok) return;
 
-      // reset likes
+      currentUser = user;
       totalLikes = 0;
       nextMilestone = 1000;
+
+      console.log("🔄 Conectando a TikTok:", user);
 
       // 🔴 cerrar conexión anterior
       if (tiktok) {
@@ -70,28 +78,28 @@ wss.on("connection", ws => {
       }
 
       // 🟢 nueva conexión
-      tiktok = new WebcastPushConnection(user);
+      tiktok = new WebcastPushConnection(user, {
+        enableExtendedGiftInfo: true
+      });
 
-      // 🎁 REGALOS
+      // ===============================
+      // 🎁 REGALOS (ANTI DUPLICADO REAL)
+      // ===============================
       tiktok.on("gift", gift => {
+        // ❗ SOLO evento final
+        if (!gift.repeatEnd) return;
 
-  // ⚠️ ignorar eventos intermedios
-  if (!gift.repeatEnd) return;
+        broadcast({
+          type: "gift",
+          gift: gift.giftName,
+          count: gift.repeatCount || 1,
+          user: gift.uniqueId
+        });
+      });
 
-  console.log(
-    `🎁 Regalo FINAL: ${gift.giftName} x${gift.repeatCount}`
-  );
-
-  broadcast({
-    type: "gift",
-    gift: gift.giftName,
-    count: gift.repeatCount || 1,
-    user: gift.uniqueId
-  });
-});
-
-
+      // ===============================
       // 💬 CHAT
+      // ===============================
       tiktok.on("chat", chat => {
         broadcast({
           type: "chat",
@@ -100,7 +108,9 @@ wss.on("connection", ws => {
         });
       });
 
+      // ===============================
       // ❤️ LIKES
+      // ===============================
       tiktok.on("like", like => {
         totalLikes += like.likeCount || 1;
 
@@ -110,26 +120,50 @@ wss.on("connection", ws => {
         });
 
         if (totalLikes >= nextMilestone) {
-          broadcast({
-            type: "likes-sound",
-            milestone: nextMilestone
-          });
+          broadcast({ type: "likes-sound" });
           nextMilestone += 1000;
         }
       });
 
+      // ===============================
+      // 🔴 TIKTOK DESCONECTADO
+      // ===============================
+      tiktok.on("disconnected", () => {
+        console.log("🔴 TikTok desconectado");
+        broadcast({
+          type: "tiktok-status",
+          connected: false
+        });
+      });
+
+      // ===============================
+      // ⚠️ STREAM TERMINADO
+      // ===============================
+      tiktok.on("streamEnd", () => {
+        console.log("⚠️ Live terminado");
+        broadcast({
+          type: "tiktok-status",
+          connected: false
+        });
+      });
+
+      // ===============================
+      // 🔌 CONECTAR
+      // ===============================
       try {
         await tiktok.connect();
+
         console.log("✅ Conectado a TikTok:", user);
 
-        // avisar al front
         broadcast({
-          type: "status",
-          message: `Conectado a @${user}`
+          type: "tiktok-status",
+          connected: true,
+          user
         });
 
       } catch (err) {
         console.error("❌ Error TikTok:", err);
+
         ws.send(JSON.stringify({
           type: "error",
           message: "No se pudo conectar al live"
@@ -142,4 +176,3 @@ wss.on("connection", ws => {
     console.log("🔴 Cliente desconectado");
   });
 });
-
