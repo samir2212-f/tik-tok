@@ -15,14 +15,14 @@ const server = app.listen(PORT, () => {
 const wss = new WebSocket.Server({ server });
 
 // ===============================
-// 🔗 TIKTOK
+// 🔗 TIKTOK (variables globales)
 // ===============================
 let tiktok = null;
 let currentUser = null;
 
 // ❤️ LIKES
 let totalLikes = 0;
-let nextMilestone = 1000;
+let nextMilestone = 5000; // 🔊 sonido cada 5000 likes
 
 // ===============================
 // 📢 BROADCAST
@@ -42,7 +42,7 @@ function broadcast(msg) {
 wss.on("connection", ws => {
   console.log("🟢 Cliente conectado");
 
-  // enviar likes actuales
+  // enviar likes actuales al conectar
   ws.send(JSON.stringify({ type: "likes", total: totalLikes }));
 
   ws.on("message", async message => {
@@ -64,8 +64,10 @@ wss.on("connection", ws => {
       if (currentUser === user && tiktok) return;
 
       currentUser = user;
+
+      // reset likes
       totalLikes = 0;
-      nextMilestone = 1000;
+      nextMilestone = 5000;
 
       console.log("🔄 Conectando a TikTok:", user);
 
@@ -86,7 +88,6 @@ wss.on("connection", ws => {
       // 🎁 REGALOS (ANTI DUPLICADO REAL)
       // ===============================
       tiktok.on("gift", gift => {
-        // ❗ SOLO evento final
         if (!gift.repeatEnd) return;
 
         broadcast({
@@ -109,19 +110,25 @@ wss.on("connection", ws => {
       });
 
       // ===============================
-      // ❤️ LIKES
+      // ❤️ LIKES (ÚNICO LISTENER)
       // ===============================
       tiktok.on("like", like => {
         totalLikes += like.likeCount || 1;
 
+        // enviar contador
         broadcast({
           type: "likes",
           total: totalLikes
         });
 
+        // 🔊 sonido cada 5000 likes
         if (totalLikes >= nextMilestone) {
-          broadcast({ type: "likes-sound" });
-          nextMilestone += 1000;
+          broadcast({
+            type: "likes-sound",
+            milestone: nextMilestone
+          });
+
+          nextMilestone += 5000;
         }
       });
 
@@ -163,7 +170,6 @@ wss.on("connection", ws => {
 
       } catch (err) {
         console.error("❌ Error TikTok:", err);
-
         ws.send(JSON.stringify({
           type: "error",
           message: "No se pudo conectar al live"
