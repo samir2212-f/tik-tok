@@ -21,8 +21,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===============================
   // 🌐 WEBSOCKET
   // ===============================
-  const protocolo = location.protocol === "https:" ? "wss" : "ws";
-  let ws;
+  const wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+ws = new WebSocket(wsUrl);
+
 
   function conectarWS() {
     if (ws && ws.readyState === WebSocket.OPEN) return;
@@ -159,6 +160,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // 📡 MENSAJES
   // ===============================
   function manejarMensaje(event) {
+    console.log("📩 Mensaje recibido:", data);
+
     const data = JSON.parse(event.data);
 
     // 🟢🔴 ESTADO TIKTOK
@@ -251,12 +254,22 @@ if (data.type === "chat") {
   // 🔗 CONECTAR
   // ===============================
   window.conectar = () => {
-    const user = document.getElementById("user").value.trim();
-    if (!user) return alert("Ingresa usuario");
-    ws.send(JSON.stringify({ type: "set-user", user }));
-  };
+  const user = document.getElementById("user").value.trim();
+  if (!user) return alert("Ingresa usuario");
+
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    alert("Aún no conectado al servidor, espera 1 segundo");
+    return;
+  }
+
+  ws.send(JSON.stringify({
+    type: "set-user",
+    user
+  }));
+};
 
 });
+
 
 
 
