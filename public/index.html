@@ -21,21 +21,31 @@
 
     h2 {
       font-size: 2.2rem;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       text-shadow:
         0 0 10px #00fff0,
         0 0 20px rgba(0, 255, 240, 0.6);
     }
 
-    input {
+    h3 {
+      margin: 20px 0 10px;
+      color: #00fff0;
+    }
+
+    input[type="text"] {
       padding: 12px;
       border-radius: 10px;
       border: none;
       font-size: 1rem;
-      margin-bottom: 15px;
+      margin-bottom: 12px;
       text-align: center;
       outline: none;
       width: 220px;
+    }
+
+    input[type="range"] {
+      width: 220px;
+      margin-top: 5px;
     }
 
     button {
@@ -51,7 +61,7 @@
       box-shadow:
         0 0 15px rgba(0, 255, 240, 0.7),
         0 0 30px rgba(0, 179, 255, 0.4);
-      margin-top: 10px;
+      margin-top: 8px;
     }
 
     button:hover {
@@ -59,7 +69,7 @@
     }
 
     p {
-      margin-top: 12px;
+      margin-top: 10px;
       font-size: 0.95rem;
       padding: 8px 18px;
       border-radius: 10px;
@@ -80,6 +90,39 @@
       color: #ffd966;
       font-weight: bold;
     }
+
+    #estadoTikTok {
+      font-weight: bold;
+    }
+
+    /* 🎁 LISTA DE REGALOS */
+    #regalosLista {
+      width: 260px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .regalo-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      background: rgba(0, 255, 240, 0.08);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .regalo-nombre {
+      color: #00fff0;
+    }
+
+    .regalo-cantidad {
+      font-weight: bold;
+      color: #00ff88;
+    }
   </style>
 </head>
 
@@ -87,14 +130,14 @@
 
   <h2>🎧 TikTok Live Sounds</h2>
 
-  <!-- 👤 USUARIO TIKTOK -->
+  <!-- 👤 USUARIO -->
   <input
     id="user"
+    type="text"
     placeholder="Usuario de TikTok"
     autocomplete="off"
   />
 
-  <!-- 🔗 CONECTAR -->
   <button onclick="conectar()">▶️ CONECTAR</button>
   <p id="conexion">🔴 Desconectado</p>
 
@@ -104,28 +147,27 @@
 
   <!-- ❤️ LIKES -->
   <p id="likes">❤️ Likes: 0</p>
-<!-- 🔴 ESTADO TIKTOK -->
-<p id="estadoTikTok">📡 TikTok: desconectado</p>
 
-<!-- 🎚 VOLUMEN -->
-<label style="margin-top:15px;">🎚 Volumen</label>
-<input
-  type="range"
-  id="volumen"
-  min="0"
-  max="1"
-  step="0.05"
-  value="0.3"
-  style="width:220px;"
->
+  <!-- 🔴 ESTADO TIKTOK -->
+  <p id="estadoTikTok">📡 TikTok: desconectado</p>
 
-<!-- 📊 REGALOS -->
-<h3 style="margin-top:20px;">🎁 Regalos recibidos</h3>
-<div id="regalosLista"></div>
+  <!-- 🎚 VOLUMEN -->
+  <label style="margin-top:15px;">🎚 Volumen</label>
+  <input
+    type="range"
+    id="volumen"
+    min="0"
+    max="1"
+    step="0.05"
+    value="0.3"
+  >
 
-  <!-- 🚀 LÓGICA -->
+  <!-- 📊 REGALOS -->
+  <h3>🎁 Regalos recibidos</h3>
+  <div id="regalosLista"></div>
+
+  <!-- 🚀 JS -->
   <script src="app.js"></script>
 
 </body>
 </html>
-
