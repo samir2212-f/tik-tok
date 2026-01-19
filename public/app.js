@@ -111,13 +111,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const contadorRegalos = {};
 
   function actualizarRegalosUI() {
-    regalosListaEl.innerHTML = "";
-    Object.entries(contadorRegalos).forEach(([g, c]) => {
-      const div = document.createElement("div");
-      div.innerText = `🎁 ${g}: ${c}`;
-      regalosListaEl.appendChild(div);
-    });
-  }
+  regalosListaEl.innerHTML = "";
+
+  Object.entries(contadorRegalos).forEach(([g, c]) => {
+    const div = document.createElement("div");
+    div.className = "regalo-item";
+
+    const nombre = document.createElement("span");
+    nombre.className = "regalo-nombre";
+    nombre.innerText = g;
+
+    const cantidad = document.createElement("span");
+    cantidad.className = "regalo-cantidad";
+    cantidad.innerText = c;
+
+    div.appendChild(nombre);
+    div.appendChild(cantidad);
+    regalosListaEl.appendChild(div);
+  });
+}
+
 
   // ===============================
   // 🔊 COLA SONIDOS
@@ -244,5 +257,6 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
 });
+
 
 
