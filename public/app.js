@@ -1,40 +1,62 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   // ===============================
+  // 📊 UI ELEMENTOS
+  // ===============================
+  const estadoTikTokEl = document.getElementById("estadoTikTok");
+  const volumenEl = document.getElementById("volumen");
+  const regalosListaEl = document.getElementById("regalosLista");
+  const conexionEl = document.getElementById("conexion");
+  const estadoEl = document.getElementById("estado");
+  const likesEl = document.getElementById("likes");
+
+  let volumenActual = 0.3;
+  let totalLikes = 0;
+  let audioActivado = localStorage.getItem("audioActivado") === "true";
+
+  if (audioActivado && estadoEl) {
+    estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
+  }
+
+  // ===============================
   // 🌐 WEBSOCKET (LOCAL / RENDER)
   // ===============================
   const protocolo = location.protocol === "https:" ? "wss" : "ws";
   let ws;
 
-  const conexionEl = document.getElementById("conexion");
-  const estadoEl = document.getElementById("estado");
-  const likesEl = document.getElementById("likes");
-
   function conectarWS() {
     ws = new WebSocket(`${protocolo}://${location.host}`);
 
     ws.onopen = () => {
-      console.log("🟢 WebSocket conectado");
       if (conexionEl) conexionEl.innerText = "🟢 Conectado al servidor";
     };
 
     ws.onclose = () => {
-      console.log("🔴 WebSocket cerrado, reintentando...");
       if (conexionEl) conexionEl.innerText = "🔴 Desconectado";
       setTimeout(conectarWS, 3000);
     };
 
     ws.onerror = () => ws.close();
-
     ws.onmessage = manejarMensaje;
   }
 
   conectarWS();
 
   // ===============================
+  // 🎚 VOLUMEN
+  // ===============================
+  if (volumenEl) {
+    volumenEl.value = volumenActual;
+    volumenEl.addEventListener("input", () => {
+      volumenActual = parseFloat(volumenEl.value);
+    });
+  }
+
+  // ===============================
   // 🧬 ANTI DUPLICADOS
   // ===============================
   const regalosProcesados = new Map();
+  const chatsProcesados = new Map();
   const REGALO_VENTANA_MS = 400;
 
   setInterval(() => {
@@ -42,17 +64,10 @@ document.addEventListener("DOMContentLoaded", () => {
     for (const [k, t] of regalosProcesados) {
       if (ahora - t > 5000) regalosProcesados.delete(k);
     }
+    for (const [k, t] of chatsProcesados) {
+      if (ahora - t > 5000) chatsProcesados.delete(k);
+    }
   }, 5000);
-
-  // ===============================
-  // 🔊 ESTADO
-  // ===============================
-  let audioActivado = localStorage.getItem("audioActivado") === "true";
-  let totalLikes = 0;
-
-  if (audioActivado && estadoEl) {
-    estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
-  }
 
   // ===============================
   // 🗣️ VOCES
@@ -92,14 +107,17 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // ===============================
-  // 🧹 LIMPIAR TEXTO
+  // 📊 CONTADOR DE REGALOS
   // ===============================
-  function limpiarTexto(texto) {
-    return texto
-      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
-      .replace(/[^\p{L}\p{N}\s.,!?]/gu, "")
-      .replace(/\s+/g, " ")
-      .trim();
+  const contadorRegalos = {};
+
+  function actualizarRegalosUI() {
+    regalosListaEl.innerHTML = "";
+    Object.entries(contadorRegalos).forEach(([regalo, cantidad]) => {
+      const div = document.createElement("div");
+      div.innerText = `🎁 ${regalo}: ${cantidad}`;
+      regalosListaEl.appendChild(div);
+    });
   }
 
   // ===============================
@@ -142,16 +160,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!audioActivado || sonidoReproduciendo || colaSonidos.length === 0) return;
 
     sonidoReproduciendo = true;
-    const sonidoUrl = colaSonidos.shift();
-    const audio = new Audio(sonidoUrl);
-    audio.volume = 0.3;
+    const audio = new Audio(colaSonidos.shift());
+    audio.volume = volumenActual;
 
-    audio.onended = () => {
-      sonidoReproduciendo = false;
-      setTimeout(procesarColaSonidos, 80);
-    };
-
-    audio.onerror = () => {
+    audio.onended = audio.onerror = () => {
       sonidoReproduciendo = false;
       setTimeout(procesarColaSonidos, 80);
     };
@@ -167,31 +179,40 @@ document.addEventListener("DOMContentLoaded", () => {
   function manejarMensaje(event) {
     const data = JSON.parse(event.data);
 
+    // 🔴🟢 ESTADO TIKTOK
+    if (data.type === "tiktok-status") {
+      estadoTikTokEl.innerText = data.connected
+        ? "🟢 TikTok: conectado"
+        : "🔴 TikTok: desconectado";
+      return;
+    }
+
     // 🎁 REGALOS
     if (data.gift) {
       const giftName = data.gift.replace(/\s+/g, "").toLowerCase();
+      contadorRegalos[giftName] = (contadorRegalos[giftName] || 0) + 1;
+      actualizarRegalosUI();
+
       const sonidoUrl = giftSounds[giftName];
+      if (!sonidoUrl) return;
 
-      if (sonidoUrl) {
-        const firma = `${data.user}|${giftName}`;
-        const ahora = Date.now();
-        const ultimo = regalosProcesados.get(firma) || 0;
+      const firma = `${data.user}|${giftName}`;
+      const ahora = Date.now();
+      const ultimo = regalosProcesados.get(firma) || 0;
 
-        if (ahora - ultimo >= REGALO_VENTANA_MS) {
-          regalosProcesados.set(firma, ahora);
-          colaSonidos.push(sonidoUrl);
-          procesarColaSonidos();
-        }
+      if (ahora - ultimo >= REGALO_VENTANA_MS) {
+        regalosProcesados.set(firma, ahora);
+        colaSonidos.push(sonidoUrl);
+        procesarColaSonidos();
       }
     }
 
     // ❤️ LIKES
     if (data.type === "likes") {
       totalLikes = data.total;
-      if (likesEl) likesEl.innerText = `❤️ Likes: ${totalLikes}`;
+      likesEl.innerText = `❤️ Likes: ${totalLikes}`;
     }
 
-    // 🔊 LIKES SOUND
     if (data.type === "likes-sound" && audioActivado) {
       colaSonidos.push(giftSounds.likes);
       procesarColaSonidos();
@@ -201,15 +222,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (data.type === "chat") {
       const firma = `${data.user}|${data.message}`;
       const ahora = Date.now();
-      const ultimo = regalosProcesados.get(firma) || 0;
+      const ultimo = chatsProcesados.get(firma) || 0;
 
       if (ahora - ultimo > 800) {
-        regalosProcesados.set(firma, ahora);
-        const texto = limpiarTexto(`${data.user} dice ${data.message}`);
-        if (texto) {
-          colaVoz.push(texto);
-          procesarColaVoz();
-        }
+        chatsProcesados.set(firma, ahora);
+        colaVoz.push(`${data.user} dice ${data.message}`);
+        procesarColaVoz();
       }
     }
   }
@@ -218,23 +236,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // 🔓 ACTIVAR SONIDO
   // ===============================
   window.activarSonido = function () {
-    const testAudio = new Audio("/sounds/Rose.mp3");
-
-    testAudio.play().then(() => {
-      testAudio.pause();
+    const test = new Audio("/sounds/Rose.mp3");
+    test.play().then(() => {
+      test.pause();
       audioActivado = true;
       localStorage.setItem("audioActivado", "true");
-
-      colaVoz = [];
-      colaSonidos = [];
-      hablando = false;
-      sonidoReproduciendo = false;
-
-      speechSynthesis.speak(
-        new SpeechSynthesisUtterance("Sonido activado correctamente")
-      );
-
-      if (estadoEl) estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
+      estadoEl.innerText = "Estado: 🔊 sonido ACTIVADO";
     });
   };
 
@@ -242,20 +249,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // 🔗 CONECTAR USUARIO
   // ===============================
   window.conectar = function () {
-    const input = document.getElementById("user");
-    const user = input.value.trim();
+    const user = document.getElementById("user").value.trim();
+    if (!user) return alert("Ingresa un usuario de TikTok");
 
-    if (!user) {
-      alert("Ingresa un usuario de TikTok");
-      return;
-    }
-
-    ws.send(JSON.stringify({
-      type: "set-user",
-      user
-    }));
-
-    if (conexionEl) conexionEl.innerText = `🟢 Conectado a @${user}`;
+    ws.send(JSON.stringify({ type: "set-user", user }));
+    conexionEl.innerText = `🟢 Conectado a @${user}`;
   };
 
 });
