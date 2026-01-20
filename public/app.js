@@ -25,8 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===============================
   // 🌐 WEBSOCKET (LOCAL / RENDER)
   // ===============================
-  const protocolo = location.protocol === "https:" ? "wss" : "ws";
-  let ws;
+ const protocolo = location.protocol === "https:" ? "wss" : "ws";
+
 
  function conectarWS() {
   if (ws && ws.readyState === WebSocket.OPEN) return;
@@ -308,6 +308,7 @@ const key = `${user}|${giftName}`;
   };
 
 });
+
 
 
 
