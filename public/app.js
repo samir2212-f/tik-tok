@@ -201,7 +201,11 @@ document.addEventListener("DOMContentLoaded", () => {
         ? data.gift
         : data.gift.name || "";
 
-      const giftName = rawGift.replace(/\s+/g, "").toLowerCase();
+      const giftName = rawGift
+  .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
+  .replace(/[^\p{L}\p{N}]/gu, "")
+  .toLowerCase();
+
 
       // 👉 REGALOS SIN COMBO (heartme)
       if (regalosSinCombo.has(giftName)) {
@@ -283,4 +287,5 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
 });
+
 
