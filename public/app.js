@@ -3,13 +3,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===============================
   // 📊 UI ELEMENTOS
   // ===============================
-  const ultimoCombo = new Map();
+  
   const estadoTikTokEl = document.getElementById("estadoTikTok");
   const volumenEl = document.getElementById("volumen");
   const regalosListaEl = document.getElementById("regalosLista");
   const conexionEl = document.getElementById("conexion");
   const estadoEl = document.getElementById("estado");
   const likesEl = document.getElementById("likes");
+  const REGALO_VENTANA_MS = 600;
+  const combosActivos = new Map();
+  const chatsProcesados = new Map();
 
   let volumenActual = 0.3;
   let totalLikes = 0;
@@ -56,22 +59,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ===============================
-  // 🧬 ANTI DUPLICADOS
-  // ===============================
-  const regalosProcesados = new Map();
-  const chatsProcesados = new Map();
-  const REGALO_VENTANA_MS = 800;
-
-  setInterval(() => {
-    const ahora = Date.now();
-    for (const [k, t] of regalosProcesados) {
-      if (ahora - t > 5000) regalosProcesados.delete(k);
-    }
-    for (const [k, t] of chatsProcesados) {
-      if (ahora - t > 5000) chatsProcesados.delete(k);
-    }
-  }, 5000);
 
   // ===============================
   // 🗣️ VOCES
@@ -192,42 +179,52 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 🎁 REGALOS
-    if (data.gift) {
-     const comboActual = data.repeatCount || 1;
-const comboAnterior = ultimoCombo.get(data.user + giftName) || 0;
+// 🎁 REGALOS (COMBOS REALES SIN DUPLICADOS)
+if (data.gift) {
+  const giftName = data.gift.replace(/\s+/g, "").toLowerCase();
+  const key = `${data.user}|${giftName}`;
+  const ahora = Date.now();
 
-const diferencia = comboActual - comboAnterior;
+  let combo = combosActivos.get(key);
 
-if (diferencia > 0) {
-  contadorRegalos[giftName] =
-    (contadorRegalos[giftName] || 0) + diferencia;
-
-  actualizarRegalosUI();
-
-  for (let i = 0; i < diferencia; i++) {
-    colaSonidos.push(giftSounds[giftName]);
+  if (!combo) {
+    combo = {
+      cantidad: 0,
+      timer: null,
+      ultimoEvento: 0
+    };
   }
-  procesarColaSonidos();
-}
 
-ultimoCombo.set(data.user + giftName, comboActual);
+  // Ignorar evento espejo (muy separado)
+  if (ahora - combo.ultimoEvento > REGALO_VENTANA_MS && combo.cantidad > 0) {
+    combo.cantidad = 0;
+  }
 
+  combo.ultimoEvento = ahora;
+  combo.cantidad += 1;
 
-      const sonidoUrl = giftSounds[giftName];
-      if (!sonidoUrl) return;
+  // Reiniciar temporizador del combo
+  if (combo.timer) clearTimeout(combo.timer);
 
-     const repeat = data.repeatCount || 1;
-    const firma = `${data.user}|${giftName}|${repeat}`;
+  combo.timer = setTimeout(() => {
+    // 👉 AQUÍ SE CONFIRMA EL COMBO
+    contadorRegalos[giftName] =
+      (contadorRegalos[giftName] || 0) + combo.cantidad;
+    actualizarRegalosUI();
 
-      const ahora = Date.now();
-      const ultimo = regalosProcesados.get(firma) || 0;
-
-      if (ahora - ultimo >= REGALO_VENTANA_MS) {
-        regalosProcesados.set(firma, ahora);
-        colaSonidos.push(sonidoUrl);
-        procesarColaSonidos();
+    for (let i = 0; i < combo.cantidad; i++) {
+      if (giftSounds[giftName]) {
+        colaSonidos.push(giftSounds[giftName]);
       }
     }
+    procesarColaSonidos();
+
+    combosActivos.delete(key);
+  }, REGALO_VENTANA_MS);
+
+  combosActivos.set(key, combo);
+}
+
 
     // ❤️ LIKES
     if (data.type === "likes") {
@@ -279,6 +276,7 @@ ultimoCombo.set(data.user + giftName, comboActual);
   };
 
 });
+
 
 
 
