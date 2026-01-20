@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const conexionEl = document.getElementById("conexion");
   const estadoEl = document.getElementById("estado");
   const likesEl = document.getElementById("likes");
-  const REGALO_VENTANA_MS = 590;
+  const REGALO_VENTANA_MS = 600;
   const combosActivos = new Map();
   const chatsProcesados = new Map();
 
@@ -191,7 +191,11 @@ if (data.gift) {
     ? data.gift
     : data.gift.name || "";
 
-const giftName = rawGift.replace(/\s+/g, "").toLowerCase();
+const giftName = rawGift
+  .toLowerCase()
+  .replace(/[^a-z0-9]/g, "");
+
+
 // 🎯 REGALOS SIN COMBO (heartme, etc)
 if (regalosSinCombo.has(giftName)) {
   if (giftSounds[giftName]) {
@@ -205,7 +209,9 @@ if (regalosSinCombo.has(giftName)) {
   return; // ⛔ NO entra a la lógica de combos
 }
 
-  const key = `${data.user}|${giftName}`;
+ const user = data.user || "anon";
+const key = `${user}|${giftName}`;
+
   const ahora = Date.now();
 
   let combo = combosActivos.get(key);
@@ -299,6 +305,7 @@ if (regalosSinCombo.has(giftName)) {
   };
 
 });
+
 
 
 
