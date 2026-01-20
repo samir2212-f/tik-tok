@@ -181,7 +181,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // 🎁 REGALOS
 // 🎁 REGALOS (COMBOS REALES SIN DUPLICADOS)
 if (data.gift) {
-  const giftName = data.gift.replace(/\s+/g, "").toLowerCase();
+  const rawGift =
+  typeof data.gift === "string"
+    ? data.gift
+    : data.gift.name || "";
+
+const giftName = rawGift.replace(/\s+/g, "").toLowerCase();
+
   const key = `${data.user}|${giftName}`;
   const ahora = Date.now();
 
@@ -276,6 +282,7 @@ if (data.gift) {
   };
 
 });
+
 
 
 
