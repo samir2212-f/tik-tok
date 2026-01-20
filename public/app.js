@@ -168,6 +168,17 @@ document.addEventListener("DOMContentLoaded", () => {
       sonidoReproduciendo = false;
     });
   }
+// 🔊 REPRODUCIR REGALO (LÓGICA SIMPLE COMO ANTES)
+function reproducirRegalo(giftName, veces = 1) {
+  if (!audioActivado) return;
+  const sonido = giftSounds[giftName];
+  if (!sonido) return;
+
+  for (let i = 0; i < veces; i++) {
+    colaSonidos.push(sonido);
+  }
+  procesarColaSonidos();
+}
 
   // ===============================
   // 📡 MENSAJES DEL SERVIDOR
@@ -198,16 +209,14 @@ const giftName = rawGift
 
 // 🎯 REGALOS SIN COMBO (heartme, etc)
 if (regalosSinCombo.has(giftName)) {
-  if (giftSounds[giftName]) {
-    contadorRegalos[giftName] =
-      (contadorRegalos[giftName] || 0) + 1;
-    actualizarRegalosUI();
+  contadorRegalos[giftName] =
+    (contadorRegalos[giftName] || 0) + 1;
+  actualizarRegalosUI();
 
-    colaSonidos.push(giftSounds[giftName]);
-    procesarColaSonidos();
-  }
-  return; // ⛔ NO entra a la lógica de combos
+  reproducirRegalo(giftName, 1);
+  return;
 }
+
 
  const user = data.user || "anon";
 const key = `${user}|${giftName}`;
@@ -241,12 +250,8 @@ const key = `${user}|${giftName}`;
       (contadorRegalos[giftName] || 0) + combo.cantidad;
     actualizarRegalosUI();
 
-    for (let i = 0; i < combo.cantidad; i++) {
-      if (giftSounds[giftName]) {
-        colaSonidos.push(giftSounds[giftName]);
-      }
-    }
-    procesarColaSonidos();
+   reproducirRegalo(giftName, combo.cantidad);
+
 
     combosActivos.delete(key);
   }, REGALO_VENTANA_MS);
@@ -305,6 +310,7 @@ const key = `${user}|${giftName}`;
   };
 
 });
+
 
 
 
