@@ -96,6 +96,11 @@ document.addEventListener("DOMContentLoaded", () => {
     whalediving: "/sounds/Whalediving.mp3",
     likes: "/sounds/Likes.mp3"
   };
+  const regalosSinCombo = new Set([
+  "heartme",
+ 
+]);
+
 
   // ===============================
   // 📊 CONTADOR DE REGALOS
@@ -187,6 +192,18 @@ if (data.gift) {
     : data.gift.name || "";
 
 const giftName = rawGift.replace(/\s+/g, "").toLowerCase();
+// 🎯 REGALOS SIN COMBO (heartme, etc)
+if (regalosSinCombo.has(giftName)) {
+  if (giftSounds[giftName]) {
+    contadorRegalos[giftName] =
+      (contadorRegalos[giftName] || 0) + 1;
+    actualizarRegalosUI();
+
+    colaSonidos.push(giftSounds[giftName]);
+    procesarColaSonidos();
+  }
+  return; // ⛔ NO entra a la lógica de combos
+}
 
   const key = `${data.user}|${giftName}`;
   const ahora = Date.now();
@@ -282,6 +299,7 @@ const giftName = rawGift.replace(/\s+/g, "").toLowerCase();
   };
 
 });
+
 
 
 
