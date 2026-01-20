@@ -203,10 +203,8 @@ if (data.gift) {
     : data.gift.name || "";
 
 const giftName = rawGift
-  .toLowerCase()
-  .replace(/[^a-z0-9]/g, "");
-
-
+  .replace(/\s+/g, "")
+  .toLowerCase();
 // 🎯 REGALOS SIN COMBO (heartme, etc)
 if (regalosSinCombo.has(giftName)) {
   contadorRegalos[giftName] =
@@ -310,6 +308,7 @@ const key = `${user}|${giftName}`;
   };
 
 });
+
 
 
 
