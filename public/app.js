@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const conexionEl = document.getElementById("conexion");
   const estadoEl = document.getElementById("estado");
   const likesEl = document.getElementById("likes");
-  const REGALO_VENTANA_MS = 600;
+  const REGALO_VENTANA_MS = 500;
   const combosActivos = new Map();
   const chatsProcesados = new Map();
 
@@ -282,6 +282,7 @@ const giftName = rawGift.replace(/\s+/g, "").toLowerCase();
   };
 
 });
+
 
 
 
