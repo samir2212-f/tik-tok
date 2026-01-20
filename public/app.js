@@ -26,28 +26,26 @@ document.addEventListener("DOMContentLoaded", () => {
   // 🌐 WEBSOCKET (LOCAL / RENDER)
   // ===============================
  const protocolo = location.protocol === "https:" ? "wss" : "ws";
-
+let ws;
 
  function conectarWS() {
-  if (ws && ws.readyState === WebSocket.OPEN) return;
-
-  ws = new WebSocket(`${protocolo}://${location.host}`);
+  ws = new WebSocket(`${protocolo}://${location.host}/ws`);
 
   ws.onopen = () => {
-    conexionEl.innerText = "🟢 Conectado al servidor";
+    if (conexionEl) conexionEl.innerText = "🟢 Conectado al servidor";
   };
 
+  ws.onclose = () => {
+    if (conexionEl) conexionEl.innerText = "🔴 Desconectado";
+    setTimeout(conectarWS, 3000);
+  };
 
-    ws.onclose = () => {
-      if (conexionEl) conexionEl.innerText = "🔴 Desconectado";
-      setTimeout(conectarWS, 3000);
-    };
+  ws.onerror = () => ws.close();
+  ws.onmessage = manejarMensaje;
+}
 
-    ws.onerror = () => ws.close();
-    ws.onmessage = manejarMensaje;
-  }
+conectarWS();
 
-  conectarWS();
 
   // ===============================
   // 🎚 VOLUMEN
@@ -308,6 +306,7 @@ const key = `${user}|${giftName}`;
   };
 
 });
+
 
 
 
