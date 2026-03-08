@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Live - Cola de Sonidos</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ESTILOS PARA DEBUG - AGREGAR AL FINAL DE style.css si prefieres */
+        .debug-panel {
+            background: #1a1a1a !important;
+            padding: 10px !important;
+            border-radius: 5px !important;
+            margin: 10px 0 !important;
+            border: 1px solid #ff5555 !important;
+            display: none;
+        }
+        .debug-header {
+            color: #ff5555 !important;
+            font-weight: bold !important;
+            margin-bottom: 5px !important;
+        }
+        .debug-log {
+            max-height: 200px !important;
+            overflow-y: auto !important;
+            font-family: monospace !important;
+            font-size: 12px !important;
+            color: #00ff00 !important;
+            background: #000 !important;
+            padding: 5px !important;
+            border-radius: 3px !important;
+        }
+        .debug-entry {
+            padding: 2px 0 !important;
+            border-bottom: 1px solid #333 !important;
+        }
+        .debug-time {
+            color: #aaa !important;
+        }
+        .debug-button {
+            background: linear-gradient(45deg, #33cc33, #339933) !important;
+            border: none !important;
+            color: white !important;
+            padding: 5px 10px !important;
+            border-radius: 3px !important;
+            cursor: pointer !important;
+            font-size: 12px !important;
+            margin: 0 5px !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 TikTok Live - Cola de Sonidos</h1>
+        <div class="subtitle">🌹 Cada 2 Rose = Sonido Especial | 💝 Cada 2 FingerHeart = Sonido Especial | 🔊 Sonidos en cola | 🗣️ Voz en comentarios</div>
+        
+        <div class="control-panel">
+            <h2>🔗 Conectar a TikTok Live</h2>
+            <div>
+                <input type="text" id="userInput" placeholder="Usuario de TikTok (sin @)" value="">
+                <button onclick="conectar()">🎬 Conectar</button>
+                <button onclick="desconectar()" style="background: linear-gradient(45deg, #555, #333);">⏹️ Desconectar</button>
+                <button onclick="detenerTTS()" style="background: linear-gradient(45deg, #ff3366, #ff6633);">⏹️ Detener Voz</button>
+                <!-- BOTÓN DEBUG AGREGADO -->
+                <button onclick="toggleDebug()" class="debug-button">🐛 Debug</button>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <label style="color: #aaa;">
+                    <input type="checkbox" id="autoPlaySound" checked> Reproducir sonidos de regalos
+                </label>
+                <br>
+                <label style="color: #aaa;">
+                    <input type="checkbox" id="ttsEnabled" checked> Leer comentarios en voz
+                </label>
+                <br>
+                <label style="color: #aaa;">
+                    <input type="range" id="volumeControl" min="0" max="100" value="70"> Volumen regalos: <span id="volumeValue">70%</span>
+                </label>
+                <br>
+                <label style="color: #aaa;">
+                    <input type="range" id="ttsVolume" min="0" max="100" value="50"> Volumen voz: <span id="ttsVolumeValue">50%</span>
+                </label>
+                <br>
+                <label style="color: #aaa;">
+                    Voz: <select id="ttsVoice">
+                        <option value="">Voz predeterminada</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+        
+        <!-- PANEL DEBUG AGREGADO -->
+        <div id="debugPanel" class="debug-panel">
+            <div class="debug-header">🐛 Debug Console</div>
+            <div id="debugLog" class="debug-log"></div>
+            <div style="margin-top: 5px;">
+                <button onclick="testSocketConnection()" class="debug-button">Test Socket</button>
+                <button onclick="testSoundFiles()" class="debug-button">Test Sonidos</button>
+                <button onclick="clearDebug()" class="debug-button">Limpiar</button>
+            </div>
+        </div>
+        
+        <div id="estado">
+            👆 Ingresa un usuario de TikTok y haz clic en Conectar
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="totalRegalos">0</div>
+                <div class="stat-label">Total Regalos</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="contadorRose">0</div>
+                <div class="stat-label">🌹 Roses</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="colaSize">0</div>
+                <div class="stat-label">Regalos en Cola</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="ttsQueueSize">0</div>
+                <div class="stat-label">Comentarios en Cola</div>
+            </div>
+        </div>
+        
+        <div id="ultimoRegalo">
+            <div>🎁 ÚLTIMO REGALO</div>
+            <div class="regalo-nombre">Esperando regalos...</div>
+            <div class="regalo-usuario">-</div>
+            <div class="regalo-cantidad">Cantidad: 0</div>
+        </div>
+        
+        <div class="cola-reproduccion">
+            <h3>🎵 Cola de Reproducción (Regalos)</h3>
+            <div id="colaContainer">
+                <div class="cola-item esperando">
+                    <span>📭 Cola vacía</span>
+                    <span class="cola-estado">Esperando...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="cola-reproduccion">
+            <h3>🗣️ Cola de Voz (Comentarios)</h3>
+            <div id="colaTTSContainer">
+                <div class="cola-item esperando">
+                    <span>📭 Cola vacía</span>
+                    <span class="cola-estado">Esperando...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="logs">
+            <h3>📜 Historial</h3>
+            <div id="logContainer">
+                <div class="log-entry"><span class="log-time">[00:00:00]</span> Sistema iniciado</div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>🌹 Cada 2 Roses = 1 sonido | 💝 Cada 2 FingerHearts = 1 sonido | 🔊 Sonidos en cola | 🗣️ Comentarios con voz</p>
+        </footer>
+    </div>
+
+   <script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    let conectado = false;
+    let historialRegalos = [];
+    let totalRegalos = 0;
+    let totalRoses = 0;
+    let roseEspeciales = 0;
+    let totalFingerHearts = 0;
+    let fingerheartEspeciales = 0;
+
+    // Elementos DOM
+    const estadoElem = document.getElementById('estado');
+    const regaloElem = document.getElementById('ultimoRegalo');
+    const logContainer = document.getElementById('logContainer');
+    const colaContainer = document.getElementById('colaContainer');
+    const colaTTSContainer = document.getElementById('colaTTSContainer');
+    const totalRegalosElem = document.getElementById('totalRegalos');
+    const contadorRoseElem = document.getElementById('contadorRose');
+    const colaSizeElem = document.getElementById('colaSize');
+    const ttsQueueSizeElem = document.getElementById('ttsQueueSize');
+    const volumeControl = document.getElementById('volumeControl');
+    const volumeValue = document.getElementById('volumeValue');
+    const autoPlaySound = document.getElementById('autoPlaySound');
+    const ttsEnabled = document.getElementById('ttsEnabled');
+    const ttsVolumeControl = document.getElementById('ttsVolume');
+    const ttsVolumeValue = document.getElementById('ttsVolumeValue');
+    const ttsVoiceSelect = document.getElementById('ttsVoice');
+
+    // Sistema de cola de reproducción PARA REGALOS
+    class ColaReproduccion {
+        constructor() {
+            this.cola = [];
+            this.reproduciendo = false;
+            this.volumen = 0.7;
+        }
+        
+        agregar(sonidoData) {
+            console.log('📥 Agregando a cola de regalos:', sonidoData);
+            
+            if (!sonidoData.archivoSonido) {
+                console.log('⚠️  Sin sonido, no se agrega a cola');
+                return null;
+            }
+            
+            const item = {
+                id: Date.now() + Math.random(),
+                usuario: sonidoData.usuario,
+                usuarioUnico: sonidoData.usuarioUnico || sonidoData.usuario,
+                sonido: sonidoData.archivoSonido,
+                regalo: sonidoData.regalo,
+                cantidad: sonidoData.cantidad,
+                esRoseEspecial: sonidoData.esRoseEspecial || false,
+                esFingerHeartEspecial: sonidoData.esFingerHeartEspecial || false,
+                timestamp: new Date()
+            };
+            
+            this.cola.push(item);
+            this.actualizarDisplay();
+            
+            if (!this.reproduciendo) {
+                this.reproducirSiguiente();
+            }
+            
+            return item;
+        }
+        
+        async reproducirSiguiente() {
+            if (this.cola.length === 0 || !autoPlaySound.checked) {
+                this.reproduciendo = false;
+                this.actualizarDisplay();
+                return;
+            }
+            
+            this.reproduciendo = true;
+            const item = this.cola[0];
+            
+            this.actualizarDisplay();
+            
+            try {
+                if (item.sonido) {
+                    console.log(`🔊 Iniciando reproducción: ${item.regalo}`);
+                    await this.reproducirAudio(item.sonido);
+                    console.log(`✅ Reproducido: ${item.regalo}`);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+            } catch (error) {
+                console.error('❌ Error reproduciendo:', error);
+            }
+            
+            this.cola.shift();
+            this.reproducirSiguiente();
+        }
+        
+        reproducirAudio(nombreArchivo) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const audio = new Audio(`/sounds/${nombreArchivo}`);
+                    audio.volume = this.volumen;
+                    
+                    audio.onended = () => {
+                        resolve();
+                    };
+                    
+                    audio.onerror = (error) => {
+                        console.error('❌ Error audio:', error);
+                        resolve();
+                    };
+                    
+                    audio.play().catch(error => {
+                        console.error('❌ Error play:', error);
+                        resolve();
+                    });
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+        
+        actualizarDisplay() {
+            colaContainer.innerHTML = '';
+            
+            if (this.cola.length === 0) {
+                colaContainer.innerHTML = `
+                    <div class="cola-item esperando">
+                        <span>📭 Cola vacía</span>
+                        <span class="cola-estado">Esperando...</span>
+                    </div>
+                `;
+                colaSizeElem.textContent = '0';
+                return;
+            }
+            
+            this.cola.forEach((item, index) => {
+                const esPrimero = index === 0;
+                const itemClass = esPrimero && this.reproduciendo ? 'reproduciendo' : 'esperando';
+                const estado = esPrimero && this.reproduciendo ? '🔊 Reproduciendo...' : '⏳ En cola';
+                
+                const div = document.createElement('div');
+                div.className = `cola-item ${itemClass}`;
+                div.innerHTML = `
+                    <div>
+                        <span class="cola-sonido">${item.regalo}</span>
+                        ${item.esRoseEspecial ? ' <span style="color:#ffd700;">⭐ ROSE ESPECIAL ⭐</span>' : ''}
+                        ${item.esFingerHeartEspecial ? ' <span style="color:#ff66ff;">💝 FINGERHEART ESPECIAL 💝</span>' : ''}
+                        <br>
+                        <span class="cola-usuario">👤 ${item.usuario}</span>
+                        <span style="color:#ff5555; margin-left:10px;">x${item.cantidad}</span>
+                    </div>
+                    <span class="cola-estado">${estado}</span>
+                `;
+                colaContainer.appendChild(div);
+            });
+            
+            colaSizeElem.textContent = this.cola.length;
+        }
+        
+        limpiar() {
+            this.cola = [];
+            this.reproduciendo = false;
+            this.actualizarDisplay();
+        }
+        
+        setVolumen(volumen) {
+            this.volumen = volumen;
+        }
+    }
+
+    // SISTEMA DE TEXT-TO-SPEECH PARA COMENTARIOS
+    class ColaTTS {
+        constructor() {
+            this.cola = [];
+            this.reproduciendo = false;
+            this.volumen = 0.5;
+            this.voz = null;
+            this.synth = window.speechSynthesis;
+            this.voices = [];
+            this.cargarVoces();
+        }
+        
+        cargarVoces() {
+            this.voices = this.synth.getVoices();
+            
+            const select = document.getElementById('ttsVoice');
+            select.innerHTML = '<option value="">Voz predeterminada</option>';
+            
+            this.voices.forEach((voz, index) => {
+                if (voz.lang.includes('es') || voz.lang.includes('en')) {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${voz.name} (${voz.lang})`;
+                    select.appendChild(option);
+                }
+            });
+        }
+        
+        agregar(usuario, mensaje, usuarioUnico = null) {
+            const item = {
+                id: Date.now() + Math.random(),
+                usuario: usuario,
+                usuarioUnico: usuarioUnico || usuario,
+                mensaje: mensaje,
+                timestamp: new Date()
+            };
+            
+            this.cola.push(item);
+            this.actualizarDisplay();
+            
+            if (!this.reproduciendo) {
+                this.reproducirSiguiente();
+            }
+            
+            return item;
+        }
+        
+        reproducirSiguiente() {
+            if (this.cola.length === 0) {
+                this.reproduciendo = false;
+                this.actualizarDisplay();
+                return;
+            }
+            
+            this.reproduciendo = true;
+            const item = this.cola[0];
+            
+            this.actualizarDisplay();
+            
+            try {
+                const utterance = new SpeechSynthesisUtterance();
+                utterance.text = `${item.usuario} dice: ${item.mensaje}`;
+                utterance.volume = this.volumen;
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                
+                if (this.voz !== null && this.voices[this.voz]) {
+                    utterance.voice = this.voices[this.voz];
+                }
+                
+                utterance.onend = () => {
+                    console.log(`✅ TTS terminado: ${item.usuario} (${item.usuarioUnico})`);
+                    this.cola.shift();
+                    setTimeout(() => this.reproducirSiguiente(), 500);
+                };
+                
+                utterance.onerror = (event) => {
+                    console.error('❌ Error TTS:', event);
+                    this.cola.shift();
+                    setTimeout(() => this.reproducirSiguiente(), 500);
+                };
+                
+                this.synth.speak(utterance);
+                console.log(`🗣️ Iniciando TTS: ${item.usuario} (${item.usuarioUnico}): ${item.mensaje}`);
+                
+            } catch (error) {
+                console.error('❌ Error en TTS:', error);
+                this.cola.shift();
+                this.reproducirSiguiente();
+            }
+        }
+        
+        actualizarDisplay() {
+            if (!colaTTSContainer) return;
+            
+            colaTTSContainer.innerHTML = '';
+            
+            if (this.cola.length === 0) {
+                colaTTSContainer.innerHTML = `
+                    <div class="cola-item esperando">
+                        <span>📭 Cola vacía</span>
+                        <span class="cola-estado">Esperando...</span>
+                    </div>
+                `;
+                ttsQueueSizeElem.textContent = '0';
+                return;
+            }
+            
+            this.cola.forEach((item, index) => {
+                const esPrimero = index === 0;
+                const itemClass = esPrimero && this.reproduciendo ? 'reproduciendo' : 'esperando';
+                const estado = esPrimero && this.reproduciendo ? '🗣️ Hablando...' : '⏳ En cola';
+                
+                const div = document.createElement('div');
+                div.className = `cola-item ${itemClass}`;
+                div.innerHTML = `
+                    <div>
+                        <span class="cola-sonido">"${item.mensaje.length > 30 ? item.mensaje.substring(0, 30) + '...' : item.mensaje}"</span>
+                        <br>
+                        <span class="cola-usuario">👤 ${item.usuario}</span>
+                    </div>
+                    <span class="cola-estado">${estado}</span>
+                `;
+                colaTTSContainer.appendChild(div);
+            });
+            
+            ttsQueueSizeElem.textContent = this.cola.length;
+        }
+        
+        limpiar() {
+            this.cola = [];
+            this.reproduciendo = false;
+            this.synth.cancel();
+            this.actualizarDisplay();
+        }
+        
+        setVolumen(volumen) {
+            this.volumen = volumen / 100;
+        }
+        
+        setVoz(indice) {
+            if (indice === "" || indice === null) {
+                this.voz = null;
+            } else {
+                this.voz = parseInt(indice);
+            }
+        }
+        
+        detener() {
+            this.synth.cancel();
+            this.reproduciendo = false;
+            this.actualizarDisplay();
+        }
+    }
+    
+    // Crear instancias de colas
+    const colaReproduccion = new ColaReproduccion();
+    const colaTTS = new ColaTTS();
+    
+    // Configurar volumen de regalos
+    colaReproduccion.setVolumen(volumeControl.value / 100);
+    volumeControl.addEventListener('input', function() {
+        const volume = this.value / 100;
+        colaReproduccion.setVolumen(volume);
+        volumeValue.textContent = this.value + '%';
+    });
+    
+    // Configurar volumen TTS
+    colaTTS.setVolumen(ttsVolumeControl.value);
+    ttsVolumeControl.addEventListener('input', function() {
+        colaTTS.setVolumen(this.value);
+        ttsVolumeValue.textContent = this.value + '%';
+    });
+    
+    // Configurar selección de voz TTS
+    ttsVoiceSelect.addEventListener('change', function() {
+        colaTTS.setVoz(this.value);
+    });
+    
+    // Recargar voces cuando estén disponibles
+    speechSynthesis.addEventListener('voiceschanged', () => {
+        colaTTS.cargarVoces();
+    });
+    
+    // Agregar entrada al log
+    function agregarLog(mensaje, tipo = 'normal') {
+        const ahora = new Date();
+        const tiempo = `[${ahora.getHours().toString().padStart(2, '0')}:${ahora.getMinutes().toString().padStart(2, '0')}:${ahora.getSeconds().toString().padStart(2, '0')}]`;
+        
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        
+        let claseEspecial = '';
+        if (tipo === 'rose-normal') {
+            claseEspecial = 'log-rose';
+        } else if (tipo === 'rose-especial') {
+            claseEspecial = 'log-rose-especial';
+        } else if (tipo === 'fingerheart-normal') {
+            claseEspecial = 'log-fingerheart';
+        } else if (tipo === 'fingerheart-especial') {
+            claseEspecial = 'log-fingerheart-especial';
+        }
+        
+        logEntry.innerHTML = `<span class="log-time">${tiempo}</span> <span class="${claseEspecial}">${mensaje}</span>`;
+        
+        logContainer.prepend(logEntry);
+        historialRegalos.unshift({ tiempo, mensaje, tipo });
+        
+        if (historialRegalos.length > 50) {
+            historialRegalos.pop();
+            if (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+    }
+    
+    // Actualizar estadísticas
+    function actualizarStats() {
+        totalRegalosElem.textContent = totalRegalos;
+        contadorRoseElem.textContent = totalRoses;
+    }
+    
+    // Conectar al live - SIMPLE Y FUNCIONAL
+    function conectar() {
+        const userInput = document.getElementById('userInput');
+        const user = userInput.value.trim();
+        
+        if (!user) {
+            estadoElem.textContent = '❌ Ingresa un usuario de TikTok';
+            estadoElem.className = 'estado-error';
+            return;
+        }
+        
+        // Resetear estadísticas
+        totalRegalos = 0;
+        totalRoses = 0;
+        roseEspeciales = 0;
+        totalFingerHearts = 0;
+        fingerheartEspeciales = 0;
+        colaReproduccion.limpiar();
+        colaTTS.limpiar();
+        actualizarStats();
+        
+        conectado = true;
+        estadoElem.innerHTML = `🔴 Conectando a <strong>@${user}</strong>...`;
+        estadoElem.className = '';
+        
+        socket.emit('startLive', user);
+        agregarLog(`🔗 Conectando a @${user}...`);
+        
+        console.log('=== CLIC EN CONECTAR ===');
+        console.log('Usuario:', user);
+        console.log('Socket ID:', socket.id);
+        console.log('Socket conectado:', socket.connected);
+    }
+    
+    // Desconectar
+    function desconectar() {
+        if (conectado) {
+            socket.emit('disconnectLive');
+            estadoElem.textContent = '⏹️ Desconectado';
+            estadoElem.className = '';
+            conectado = false;
+            colaReproduccion.limpiar();
+            colaTTS.limpiar();
+            agregarLog('⏹️ Desconectado manualmente');
+        }
+    }
+    
+    // Detener TTS
+    function detenerTTS() {
+        colaTTS.detener();
+        agregarLog('⏹️ Voz detenida manualmente');
+    }
+    
+    // Escuchar eventos del servidor
+    socket.on('estado', msg => {
+        console.log('📥 Recibido "estado":', msg);
+        estadoElem.innerHTML = msg;
+        
+        if (msg.includes('🟢') || msg.includes('Conectado')) {
+            estadoElem.className = 'estado-conectado';
+        } else if (msg.includes('❌') || msg.includes('Error')) {
+            estadoElem.className = 'estado-error';
+        } else {
+            estadoElem.className = '';
+        }
+        
+        agregarLog(`📡 ${msg}`);
+    });
+    
+    socket.on('regalo', data => {
+        console.log('🎁 Recibido regalo de:', data.usuario, '(', data.usuarioUnico || 'sin uniqueId', ')');
+        
+        // Actualizar estadísticas
+        if (data.esRose) {
+            if (data.esRoseEspecial) {
+                totalRoses += 2;
+                roseEspeciales++;
+                totalRegalos++;
+            } else {
+                totalRoses += data.cantidad;
+                totalRegalos++;
+            }
+        } else if (data.esFingerHeart) {
+            if (data.esFingerHeartEspecial) {
+                totalFingerHearts += 2;
+                fingerheartEspeciales++;
+                totalRegalos++;
+            } else {
+                totalFingerHearts += data.cantidad;
+                totalRegalos++;
+            }
+        } else {
+            totalRegalos++;
+        }
+        
+        actualizarStats();
+        
+        // Actualizar display del último regalo
+        const esRoseEspecial = data.esRoseEspecial;
+        const esFingerHeartEspecial = data.esFingerHeartEspecial;
+        
+        regaloElem.className = (esRoseEspecial || esFingerHeartEspecial) ? 'regalo-especial' : '';
+        
+        let tituloEspecial = '';
+        if (esRoseEspecial) tituloEspecial = '⭐ ROSE ESPECIAL ⭐';
+        else if (esFingerHeartEspecial) tituloEspecial = '💝 FINGERHEART ESPECIAL 💝';
+        else tituloEspecial = 'ÚLTIMO REGALO';
+        
+        let emoji = '';
+        if (esRoseEspecial) emoji = '⭐';
+        else if (esFingerHeartEspecial) emoji = '💝';
+        
+        regaloElem.innerHTML = `
+            <div>🎁 ${tituloEspecial}</div>
+            <div class="regalo-nombre ${(esRoseEspecial || esFingerHeartEspecial) ? 'regalo-especial-text' : ''}">
+                ${data.regalo} ${emoji}
+            </div>
+            <div class="regalo-usuario">👤 ${data.usuario}</div>
+            <div class="regalo-cantidad">Cantidad: ${data.cantidad} | 💎 ${data.diamantes} | Total Roses: ${totalRoses}</div>
+        `;
+        
+        // Agregar a cola de reproducción
+        const itemCola = colaReproduccion.agregar(data);
+        
+        // Log según tipo
+        if (esRoseEspecial) {
+            agregarLog(`<span class="log-rose-especial">⭐ ROSE ESPECIAL (cada 2) ⭐</span> ${data.usuario}`, 'rose-especial');
+        } else if (data.esRose) {
+            agregarLog(`🌹 ${data.regalo} de ${data.usuario} x${data.cantidad} (sin sonido)`, 'rose-normal');
+        } else if (esFingerHeartEspecial) {
+            agregarLog(`💝 <span class="log-fingerheart-especial">FINGERHEART ESPECIAL (cada 2) 💝</span> ${data.usuario}`, 'fingerheart-especial');
+        } else if (data.esFingerHeart) {
+            agregarLog(`💝 ${data.regalo} de ${data.usuario} x${data.cantidad} (sin sonido)`, 'fingerheart-normal');
+        } else if (data.archivoSonido) {
+            agregarLog(`🎁 ${data.regalo} de ${data.usuario} x${data.cantidad}`);
+        } else {
+            agregarLog(`🎁 ${data.regalo} de ${data.usuario} x${data.cantidad} (sin sonido)`);
+        }
+    });
+    
+    socket.on('miembro', data => {
+        console.log('👤 Miembro:', data.usuario, '(', data.usuarioUnico, ') se unió');
+        agregarLog(`👤 ${data.usuario} se unió al live`);
+    });
+    
+    socket.on('chat', data => {
+        console.log('💬 Chat:', data.usuario, '(', data.usuarioUnico, '):', data.mensaje);
+        agregarLog(`💬 ${data.usuario}: ${data.mensaje}`);
+        
+        // Agregar a cola TTS si está habilitado
+        if (ttsEnabled.checked && data.mensaje && data.mensaje.trim() !== '') {
+            if (data.mensaje.length <= 100) {
+                colaTTS.agregar(data.usuario, data.mensaje, data.usuarioUnico);
+            }
+        }
+    });
+    
+    socket.on('connect', () => {
+        console.log('✅ Conectado al servidor Socket.io');
+        agregarLog('✅ Conectado al servidor');
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('❌ Desconectado del servidor Socket.io');
+        agregarLog('❌ Desconectado del servidor');
+        estadoElem.textContent = '❌ Desconectado del servidor';
+        estadoElem.className = 'estado-error';
+        colaReproduccion.limpiar();
+        colaTTS.limpiar();
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('❌ Error de conexión Socket.io:', error);
+        estadoElem.textContent = '❌ Error de conexión con el servidor';
+        estadoElem.className = 'estado-error';
+    });
+    
+    // Manejar entrada con Enter
+    document.getElementById('userInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            conectar();
+        }
+    });
+    
+    // Inicializar
+    window.addEventListener('load', function() {
+        console.log('🚀 Página cargada');
+        agregarLog('🚀 Sistema iniciado');
+        agregarLog('🌹 Cada 2 Roses = 1 sonido | Rose individual = sin sonido');
+        agregarLog('💝 Cada 2 FingerHearts = 1 sonido | FingerHeart individual = sin sonido');
+        agregarLog('🗣️ Comentarios con voz activada');
+        actualizarStats();
+        
+        colaTTS.cargarVoces();
+    });
+</script>
+</body>
+</html>
